@@ -1,4 +1,12 @@
-# Devnotes: a problem is a list containing a particular structure...
+# Devnotes: a problem is a list containing a particular structure:
+# A problem consists of:
+#   label - unique problem identifier
+#   ytype - target type ("regression" or "classification")
+#   y - response vector
+#   x - predictor data frame
+#   ids - unique row identifiers
+#   folds - repeated cross-validation folds,
+#             typically generated with caret::createMultiFolds()
 
 new_problem <- function(label, ytype, y, x, ids, folds) {
 
@@ -169,4 +177,3 @@ print.summary.problem <- function(x, ...) {
 
   invisible(x)
 }
-
