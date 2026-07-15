@@ -10,7 +10,7 @@ problem(label, ytype, y, x, ids, folds)
 \item{label}{Character scalar identifying the problem.}
 
 \item{ytype}{Character scalar giving the response type:
-\code{"regression"} or \code{"classification"}.}
+"regression" or "classification".}
 
 \item{y}{Response vector. Numeric for regression or factor for
 classification.}
@@ -20,24 +20,29 @@ classification.}
 \item{ids}{Character vector of row identifiers.}
 
 \item{folds}{List of training indices, typically produced by
-\code{\link[caret:createMultiFolds]{caret::createMultiFolds()}}.}
+\code{caret::createMultiFolds()}.}
 }
 \value{
-An object of class \code{"problem"}.
+An object of class c(ytype, "problem").
 }
 \description{
-Creates an object of class \code{"problem"} describing a supervised
-learning problem and the associated resampling scheme.
+Creates an object describing a supervised learning problem and the
+associated resampling scheme.
 }
 \details{
+The problem type is encoded in the S3 class:
+\itemize{
+\item \code{class = c("regression", "problem")}
+\item \code{class = c("classification", "problem")}
+}
+
 A problem consists of:
 \itemize{
-\item \code{label} - unique problem identifier
-\item \code{ytype} - target type (\code{"regression"} or \code{"classification"})
-\item \code{y} - response vector
-\item \code{x} - predictor data frame
-\item \code{ids} - unique row identifiers
-\item \code{folds} - repeated cross-validation folds, typically generated
-with \code{\link[caret:createMultiFolds]{caret::createMultiFolds()}}
+\item label - unique problem identifier
+\item y - response vector
+\item x - predictor data frame
+\item ids - unique row identifiers
+\item folds - repeated cross-validation folds, typically generated with
+\code{caret::createMultiFolds()}
 }
 }

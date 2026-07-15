@@ -13,6 +13,6 @@ validate_problem(x)
 The validated object, invisibly.
 }
 \description{
-Internal validator for objects of class \code{"problem"}.
+Internal validator for objects of class "problem".
 }
 \keyword{internal}

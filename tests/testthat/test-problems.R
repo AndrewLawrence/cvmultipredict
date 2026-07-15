@@ -13,6 +13,6 @@ test_that("problem construction works", {
     }
   )
 
-  expect_identical(class(res), "problem")
+  expect_identical(class(res), c("regression","problem"))
 
 })

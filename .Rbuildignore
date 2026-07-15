@@ -1,3 +1,4 @@
 ^LICENSE\.md$
 ^cvmultipredict\.Rproj$
 ^.development$
+^\.Rproj\.user$

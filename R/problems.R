@@ -1,58 +1,78 @@
-# Devnotes: a problem is a list containing a particular structure:
-# A problem consists of:
-#   label - unique problem identifier
-#   ytype - target type ("regression" or "classification")
-#   y - response vector
-#   x - predictor data frame
-#   ids - unique row identifiers
-#   folds - repeated cross-validation folds,
-#             typically generated with caret::createMultiFolds()
+## Devnotes: a problem is a list containing a particular structure:
+##
+## A problem consists of:
+##
+## label - unique problem identifier
+## y - response vector
+## x - predictor data frame
+## ids - unique row identifiers
+## folds - repeated cross-validation folds, typically generated with caret::createMultiFolds()
+##
+## The target type is represented by the first element of the S3 class:
+## class = c("regression", "problem")
+## class = c("classification", "problem")
 
+
+#' Low-level problem constructor
+#'
+#' @param label Character scalar identifying the problem.
+#' @param ytype Character scalar giving the response type:
+#'   "regression" or "classification".
+#' @param y Response vector.
+#' @param x Data frame of predictors.
+#' @param ids Character vector of row identifiers.
+#' @param folds List of training indices.
+#'
+#' @return An object with class c(ytype, "problem").
+#'
+#' @keywords internal
 new_problem <- function(label, ytype, y, x, ids, folds) {
-
   structure(
     list(
       label = label,
-      ytype = ytype,
       y = y,
       x = x,
       ids = ids,
       folds = folds
     ),
-    class = "problem"
+    class = c(ytype, "problem")
   )
 }
 
+
 #' Construct a machine-learning problem
 #'
-#' Creates an object of class `"problem"` describing a supervised
-#' learning problem and the associated resampling scheme.
+#' Creates an object describing a supervised learning problem and the
+#' associated resampling scheme.
+#'
+#' The problem type is encoded in the S3 class:
+#'
+#' * `class = c("regression", "problem")`
+#' * `class = c("classification", "problem")`
 #'
 #' A problem consists of:
 #'
-#' * `label` - unique problem identifier
-#' * `ytype` - target type (`"regression"` or `"classification"`)
-#' * `y` - response vector
-#' * `x` - predictor data frame
-#' * `ids` - unique row identifiers
-#' * `folds` - repeated cross-validation folds, typically generated
-#'   with [caret::createMultiFolds()]
+#' * label - unique problem identifier
+#' * y - response vector
+#' * x - predictor data frame
+#' * ids - unique row identifiers
+#' * folds - repeated cross-validation folds, typically generated with
+#'   `caret::createMultiFolds()`
 #'
 #' @param label Character scalar identifying the problem.
 #' @param ytype Character scalar giving the response type:
-#'   `"regression"` or `"classification"`.
+#'   "regression" or "classification".
 #' @param y Response vector. Numeric for regression or factor for
 #'   classification.
 #' @param x Data frame of predictors.
 #' @param ids Character vector of row identifiers.
 #' @param folds List of training indices, typically produced by
-#'   [caret::createMultiFolds()].
+#'   `caret::createMultiFolds()`.
 #'
-#' @return An object of class `"problem"`.
+#' @return An object of class c(ytype, "problem").
 #'
 #' @export
 problem <- function(label, ytype, y, x, ids, folds) {
-
   new_problem(
     label = label,
     ytype = ytype,
@@ -65,9 +85,27 @@ problem <- function(label, ytype, y, x, ids, folds) {
 }
 
 
+#' Return the type of a problem
+#'
+#' @param x A problem object.
+#'
+#' @return `"regression"` or `"classification"`.
+#'
+#' @export
+problem_type <- function(x) {
+  UseMethod("problem_type")
+}
+
+
+#' @export
+problem_type.problem <- function(x) {
+  class(x)[1]
+}
+
+
 #' Validate a problem object
 #'
-#' Internal validator for objects of class `"problem"`.
+#' Internal validator for objects of class "problem".
 #'
 #' @param x A problem object.
 #'
@@ -75,18 +113,19 @@ problem <- function(label, ytype, y, x, ids, folds) {
 #'
 #' @keywords internal
 validate_problem <- function(x) {
-
   stopifnot(inherits(x, "problem"))
+
+  ytype <- problem_type(x)
+
+  if (!ytype %in% c("regression", "classification")) {
+    stop(
+      "Problem class must begin with 'regression' or 'classification'.",
+      call. = FALSE
+    )
+  }
 
   if (!is.character(x$label) || length(x$label) != 1) {
     stop("label must be a character scalar.", call. = FALSE)
-  }
-
-  if (!x$ytype %in% c("regression", "classification")) {
-    stop(
-      "ytype must be 'regression' or 'classification'.",
-      call. = FALSE
-    )
   }
 
   if (!is.data.frame(x$x)) {
@@ -107,14 +146,14 @@ validate_problem <- function(x) {
     stop("folds must be a list.", call. = FALSE)
   }
 
-  if (x$ytype == "regression" && !is.numeric(x$y)) {
+  if (inherits(x, "regression") && !is.numeric(x$y)) {
     stop(
       "For regression problems y must be numeric.",
       call. = FALSE
     )
   }
 
-  if (x$ytype == "classification" && !is.factor(x$y)) {
+  if (inherits(x, "classification") && !is.factor(x$y)) {
     stop(
       "For classification problems y must be a factor.",
       call. = FALSE
@@ -132,10 +171,9 @@ validate_problem <- function(x) {
 #'
 #' @export
 print.problem <- function(x, ...) {
-
-  cat("<problem>\n")
+  cat("\n")
   cat("Label:", x$label, "\n")
-  cat("Type :", x$ytype, "\n")
+  cat("Type :", problem_type(x), "\n")
   cat("Rows :", nrow(x$x), "\n")
   cat("Vars :", ncol(x$x), "\n")
   cat("Folds:", length(x$folds), "\n")
@@ -151,22 +189,25 @@ print.problem <- function(x, ...) {
 #'
 #' @export
 summary.problem <- function(object, ...) {
-
   out <- list(
     label = object$label,
-    ytype = object$ytype,
+    ytype = problem_type(object),
     n = nrow(object$x),
     p = ncol(object$x),
     n_folds = length(object$folds)
   )
 
-  class(out) <- "summary.problem"
+  class(out) <- c(
+    paste0("summary.", problem_type(object)),
+    "summary.problem"
+  )
+
   out
 }
 
+
 #' @export
 print.summary.problem <- function(x, ...) {
-
   cat("Problem summary\n")
   cat("----------------\n")
   cat("Label   :", x$label, "\n")
