@@ -4,10 +4,14 @@
 \alias{null_model_mse}
 \title{Null model performance}
 \usage{
-null_model_mse(x, ...)
+null_model_mse(x, validity = c("apparent", "cv"), combine = combine_mean, ...)
 }
 \arguments{
 \item{x}{A problem object.}
+
+\item{validity}{Either "apparent" or "cv".}
+
+\item{combine}{Function used to combine split-level estimates.}
 
 \item{...}{Additional arguments passed to methods.}
 }
@@ -15,12 +19,6 @@ null_model_mse(x, ...)
 Numeric scalar.
 }
 \description{
-Calculates the performance of a null model for a problem.
-}
-\details{
-For regression, the null model predicts the mean of y for every observation
-and returns the mean squared error.
-
-For classification, the null model predicts the majority class for every
-observation and returns the 0-1 error rate.
+Calculates null model mean squared error using either apparent validity
+or cross-validation folds stored in the problem object.
 }
