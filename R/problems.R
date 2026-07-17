@@ -233,6 +233,11 @@ as.data.frame.problem <- function(x, ..., stringsAsFactors = FALSE) {
         x$x)
 }
 
+#' Convert a problem-class object to rsample format
+#' @param x a [problem] object
+#' @param ... unused
+#' @return a [rsample::rsample-package] rset object
+#' @importFrom rsample make_splits
 #' @export
 as_rsample.problem <- function(x, ...) {
   df <- as.data.frame(x)
