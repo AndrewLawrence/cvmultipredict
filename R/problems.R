@@ -6,11 +6,12 @@
 ## y - response vector
 ## x - predictor data frame
 ## ids - unique row identifiers
-## folds - repeated cross-validation folds, typically generated with caret::createMultiFolds()
+## folds - repeated cross-validation folds, typically generated with
+##          caret::createMultiFolds()
 ##
 ## The target type is represented by the first element of the S3 class:
-## class = c("regression", "problem")
-## class = c("classification", "problem")
+## class : c("regression", "problem")
+## class : c("classification", "problem")
 
 
 #' Low-level problem constructor
@@ -160,6 +161,13 @@ validate_problem <- function(x) {
     )
   }
 
+  if ("y" %in% colnames(x)) {
+    stop(
+      "Do not include a variable called 'y' in the predictors",
+      call. = FALSE
+    )
+  }
+
   invisible(x)
 }
 
@@ -217,4 +225,26 @@ print.summary.problem <- function(x, ...) {
   cat("Folds   :", x$n_folds, "\n")
 
   invisible(x)
+}
+
+#' @export
+as.data.frame.problem <- function(x, ..., stringsAsFactors = FALSE) {
+  cbind(y = data.frame(y = x$y),
+        x$x)
+}
+
+#' @export
+as_rsample.problem <- function(x, ...) {
+  df <- as.data.frame(x)
+  folds <- x$folds
+  n <- nrow(df)
+  idx <- lapply(
+    folds,
+    \(f) {
+      list(analysis = f,
+           assessment = seq(1, n)[-f])
+    }
+  )
+  splits <- lapply(idx, \(ids) rsample::make_splits(ids, data = df))
+  rsample::manual_rset(splits, ids = names(folds))
 }

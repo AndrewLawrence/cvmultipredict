@@ -2,3 +2,4 @@
 ^cvmultipredict\.Rproj$
 ^.development$
 ^\.Rproj\.user$
+^\.lintr$

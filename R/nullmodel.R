@@ -12,7 +12,11 @@ null_model_mse_split.regression <- function(x, train, test, ...) {
 }
 
 #' @export
-null_model_mse_split.classification <- function(x, train, test, event_level = NULL, ...) {
+null_model_mse_split.classification <- function(x,
+                                                train,
+                                                test,
+                                                event_level = NULL,
+                                                ...) {
   y <- outcome01(x, event_level = event_level)
 
   y_hat <- mean(y[train])
@@ -34,10 +38,10 @@ null_model_mse_split.classification <- function(x, train, test, event_level = NU
 #'
 #' @export
 null_model_mse <- function(
-    x,
-    validity = c("apparent", "cv"),
-    combine = combine_mean,
-    ...
+  x,
+  validity = c("apparent", "cv"),
+  combine = combine_mean,
+  ...
 ) {
   UseMethod("null_model_mse")
 }
@@ -45,10 +49,10 @@ null_model_mse <- function(
 
 #' @export
 null_model_mse.problem <- function(
-    x,
-    validity = c("apparent", "cv"),
-    combine = combine_mean,
-    ...
+  x,
+  validity = c("apparent", "cv"),
+  combine = combine_mean,
+  ...
 ) {
   estimate_by_validity(
     x = x,

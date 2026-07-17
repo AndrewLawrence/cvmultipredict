@@ -46,9 +46,9 @@ combine_fisherz <- combine_transformed(
 )
 
 # Reusable wrapper function:
-#   x = a problem object.
-#   validity = apparent | cv
-#   estimator = a function like null_model_mse
+#   x : a problem object.
+#   validity : apparent | cv
+#   estimator : a function like null_model_mse
 estimate_by_validity <- function(x, validity, estimator, combine, ...) {
   validity <- match.arg(validity, c("apparent", "cv"))
 
@@ -64,7 +64,8 @@ estimate_by_validity <- function(x, validity, estimator, combine, ...) {
 
     cv = {
       if (length(x$folds) == 0) {
-        stop("Cannot use validity = 'cv' because x$folds is empty.", call. = FALSE)
+        stop("Cannot use validity = 'cv' because x$folds is empty.",
+             call. = FALSE)
       }
 
       lapply(
@@ -73,7 +74,8 @@ estimate_by_validity <- function(x, validity, estimator, combine, ...) {
           test <- setdiff(all_idx, train)
 
           if (length(test) == 0) {
-            stop("At least one fold has no held-out observations.", call. = FALSE)
+            stop("At least one fold has no held-out observations.",
+                 call. = FALSE)
           }
 
           estimator(x, train = train, test = test, ...)
@@ -93,7 +95,8 @@ outcome01 <- function(x, event_level = NULL) {
 
   if (is.null(event_level)) {
     if (nlevels(y) != 2) {
-      stop("Classification null MSE currently requires a two-level factor.", call. = FALSE)
+      stop("Classification null MSE currently requires a two-level factor.",
+           call. = FALSE)
     }
 
     return(as.numeric(y) - 1)
@@ -105,4 +108,3 @@ outcome01 <- function(x, event_level = NULL) {
 
   as.integer(y == event_level)
 }
-
