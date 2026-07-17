@@ -2,16 +2,24 @@
 % Please edit documentation in R/analysis_helpers.R
 \name{manifest_params}
 \alias{manifest_params}
-\title{Return model params from a manifest}
+\alias{manifest_params.analysis}
+\alias{manifest_params.default}
+\title{Return model setting params from a manifest}
 \usage{
-manifest_params(manifest)
+manifest_params(x, ...)
+
+\method{manifest_params}{analysis}(x, ...)
+
+\method{manifest_params}{default}(x, ...)
 }
 \arguments{
-\item{manifest}{A model manifest list.}
+\item{x}{An analysis or its model manifest list.}
+
+\item{...}{unused.}
 }
 \value{
 Named list.
 }
 \description{
-Return model params from a manifest
+Return model setting params from a manifest
 }

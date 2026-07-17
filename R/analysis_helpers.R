@@ -1,37 +1,31 @@
 # analysis-helpers.R
 
-#' Return the manifest for an analysis
-#'
-#' @param x An analysis object.
-#'
-#' @return A model manifest list.
-#'
-#' @export
-analysis_manifest <- function(x) {
-  UseMethod("analysis_manifest")
-}
-
-
-#' @export
-analysis_manifest.analysis <- function(x) {
-  validate_analysis(x)
-  read_model_manifest(x$manifest_path)
-}
-
-
 #' Return enabled model names from a manifest
 #'
-#' @param manifest A model manifest list.
+#' @param x A model manifest
+#' @param ... unused
 #'
 #' @return Character vector.
 #'
 #' @export
-manifest_enabled_models <- function(manifest) {
-  validate_model_manifest(manifest)
+enabled_models <- function(x, ...) {
+  UseMethod("enabled_models")
+}
 
-  names(manifest$models)[
+#' @rdname enabled_models
+#' @export
+enabled_models.analysis <- function(x, ...) {
+  enabled_models.default(manifest(x))
+}
+
+#' @rdname enabled_models
+#' @export
+enabled_models.default <- function(x, ...) {
+  validate_model_manifest(x)
+
+  names(x$models)[
     vapply(
-      manifest$models,
+      x$models,
       function(entry) isTRUE(entry$enabled),
       logical(1)
     )
@@ -41,37 +35,62 @@ manifest_enabled_models <- function(manifest) {
 
 #' Return model result paths from a manifest
 #'
-#' @param manifest A model manifest list.
+#' @param x An analysis or its model manifest
+#' @param ... unused
 #'
 #' @return Named character vector.
 #'
 #' @export
-manifest_resultpaths <- function(manifest) {
-  validate_model_manifest(manifest)
+resultpaths <- function(x, ...) {
+  UseMethod("resultpaths")
+}
+
+#' @rdname resultpaths
+#' @export
+resultpaths.analysis <- function(x, ...) {
+  resultpaths.default(manifest(x))
+}
+
+#' @rdname resultpaths
+#' @export
+resultpaths.default <- function(x, ...) {
+  validate_model_manifest(x)
 
   stats::setNames(
     vapply(
-      manifest$models,
+      x$models,
       function(entry) entry$resultpath,
       character(1)
     ),
-    names(manifest$models)
+    names(x$models)
   )
 }
 
 
-#' Return model params from a manifest
+#' Return model setting params from a manifest
 #'
-#' @param manifest A model manifest list.
-#'
+#' @param x An analysis or its model manifest list.
+#' @param ... unused.
 #' @return Named list.
 #'
 #' @export
-manifest_params <- function(manifest) {
-  validate_model_manifest(manifest)
+manifest_params <- function(x, ...) {
+  UseMethod("manifest_params")
+}
+
+#' @rdname manifest_params
+#' @export
+manifest_params.analysis <- function(x, ...) {
+  manifest_params.default(manifest(x))
+}
+
+#' @rdname manifest_params
+#' @export
+manifest_params.default <- function(x, ...) {
+  validate_model_manifest(x)
 
   lapply(
-    manifest$models,
+    x$models,
     function(entry) {
       if (is.null(entry$params)) {
         list()
@@ -83,37 +102,113 @@ manifest_params <- function(manifest) {
 }
 
 
-#' Return enabled model names for an analysis
+#' Check runtime model status for an analysis
+#'
+#' Placeholder checker.
+#'
+#' A model is considered present if the directory specified by its relative
+#' resultpath exists inside the analysis directory.
 #'
 #' @param x An analysis object.
+#' @param enabled_only Logical. If TRUE, check only enabled models.
 #'
-#' @return Character vector.
+#' @return A data.frame containing model status.
 #'
+#' @keywords internal
+check_models <- function(x,
+                         enabled_only = TRUE,
+                         ...) {
+  UseMethod("check_models")
+}
+
+#' @rdname check_models
 #' @export
-analysis_enabled_models <- function(x) {
-  manifest_enabled_models(analysis_manifest(x))
+check_models.default <- function(x, enabled_only = TRUE, ...) {
+  stop("Only implemented for analysis class", call. = FALSE)
+}
+
+#' @rdname check_models
+#' @export
+check_models.analysis <- function(x, enabled_only = TRUE, ...) {
+  validate_analysis(x)
+
+  manifest <- manifest(x)
+
+  model_names <- names(manifest$models)
+
+  if (isTRUE(enabled_only)) {
+    model_names <- enabled_models(manifest)
+  }
+
+  resultpaths <- resultpaths(manifest)[model_names]
+  absolute_paths <- file.path(x$dir, resultpaths)
+
+  data.frame(
+    model = model_names,
+    enabled = vapply(
+      manifest$models[model_names],
+      function(entry) isTRUE(entry$enabled),
+      logical(1)
+    ),
+    resultpath = unname(resultpaths),
+    path = unname(absolute_paths),
+    exists = dir.exists(absolute_paths),
+    stringsAsFactors = FALSE
+  )
 }
 
 
-#' Return result paths for an analysis
+#' Return enabled models with missing result folders
+#'
+#' Intended to support a future run.analysis() method.
 #'
 #' @param x An analysis object.
-#'
-#' @return Named character vector.
+#' @param ... unused.
+#' @return Character vector of pending model names.
 #'
 #' @export
-analysis_resultpaths <- function(x) {
-  manifest_resultpaths(analysis_manifest(x))
+pending_models <- function(x, ...) {
+  UseMethod("pending_models")
+}
+
+#' @rdname pending_models
+#' @export
+pending_models.default <- function(x, ...) {
+  stop("Only implemented for analysis class", call. = FALSE)
+}
+
+#' @rdname pending_models
+#' @export
+pending_models.analysis <- function(x, ...) {
+  status <- check_models(x, enabled_only = TRUE)
+
+  status$model[!status$exists]
 }
 
 
-#' Return model params for an analysis
+#' Return enabled models with existing result folders
+#'
+#' Intended to support a future run.analysis() method.
 #'
 #' @param x An analysis object.
-#'
-#' @return Named list.
+#' @param ... unused.
+#' @return Character vector of existing model names.
 #'
 #' @export
-analysis_params <- function(x) {
-  manifest_params(analysis_manifest(x))
+existing_models <- function(x, ...) {
+  UseMethod("existing_models")
+}
+
+#' @rdname existing_models
+#' @export
+existing_models.default <- function(x, ...) {
+  stop("Only implemented for analysis class", call. = FALSE)
+}
+
+#' @rdname existing_models
+#' @export
+existing_models.analysis <- function(x, ...) {
+  status <- check_models(x, enabled_only = TRUE)
+
+  status$model[!status$exists]
 }

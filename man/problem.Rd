@@ -2,20 +2,28 @@
 % Please edit documentation in R/problems.R
 \name{problem}
 \alias{problem}
-\title{Construct a machine-learning problem}
+\alias{problem.default}
+\alias{problem.analysis}
+\title{Construct/extract a machine-learning problem}
 \usage{
-problem(label, ytype, y, x, ids, folds)
+problem(x, ...)
+
+\method{problem}{default}(x, y, label, ytype, ids, folds, ...)
+
+\method{problem}{analysis}(x, ...)
 }
 \arguments{
-\item{label}{Character scalar identifying the problem.}
+\item{x}{Data frame of predictors.}
 
-\item{ytype}{Character scalar giving the response type:
-"regression" or "classification".}
+\item{...}{unused.}
 
 \item{y}{Response vector. Numeric for regression or factor for
 classification.}
 
-\item{x}{Data frame of predictors.}
+\item{label}{Character scalar identifying the problem.}
+
+\item{ytype}{Character scalar giving the response type:
+"regression" or "classification".}
 
 \item{ids}{Character vector of row identifiers.}
 
@@ -26,8 +34,8 @@ classification.}
 An object of class c(ytype, "problem").
 }
 \description{
-Creates an object describing a supervised learning problem and the
-associated resampling scheme.
+Creates or extracts an object describing a supervised learning problem
+and the associated resampling scheme.
 }
 \details{
 The problem type is encoded in the S3 class:

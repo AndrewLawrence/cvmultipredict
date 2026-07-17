@@ -2,9 +2,6 @@
 
 #' Create a default model manifest
 #'
-#' The manifest is analysis agnostic and can be reused across different
-#' problems or analysis directories.
-#'
 #' @return A model manifest list.
 #'
 #' @export
@@ -250,4 +247,32 @@ is_absolute_path <- function(path) {
 has_parent_path_component <- function(path) {
   parts <- unlist(strsplit(path, "[/\\\\]+"))
   any(parts == "..")
+}
+
+
+#' Read an analysis manifest
+#'
+#' The manifest of an analysis is a JSON specifying which models to run, along
+#'   with additional options.
+#'
+#' @param x Object to read manifest for.
+#' @param ... Additional arguments.
+#'
+#' @return a list setting out file_version and models: a list of
+#'    the models to run for a given analysis.
+#'
+#' @export
+manifest <- function(x, ...) {
+  UseMethod("manifest")
+}
+
+#' @export
+manifest.default <- function(x, ...) {
+  # attempt to read json file location
+  validate_model_manifest(read_model_manifest(path = x))
+}
+
+#' @export
+manifest.analysis <- function(x, ...) {
+  manifest.default(x$manifest_path)
 }

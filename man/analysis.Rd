@@ -2,37 +2,59 @@
 % Please edit documentation in R/analysis.R
 \name{analysis}
 \alias{analysis}
-\title{Construct a reproducible machine-learning analysis}
+\title{Construct or resume a reproducible machine-learning analysis}
 \usage{
 analysis(
-  problem,
+  problem = NULL,
   dir,
   manifest = NULL,
   create = TRUE,
+  overwrite_problem = FALSE,
   overwrite_manifest = FALSE
 )
 }
 \arguments{
-\item{problem}{A problem object.}
+\item{problem}{Optional problem object. Required when creating a new analysis.
+If NULL, the analysis is reconstructed from the directory.}
 
 \item{dir}{Character scalar. Analysis output directory.}
 
-\item{manifest}{Optional manifest list. If NULL, an existing manifest will be
-read if present, otherwise a default manifest will be created.}
+\item{manifest}{Optional manifest list. Used only in creation mode.}
 
-\item{create}{Logical. Should the analysis directory be created?}
+\item{create}{Logical. Should the analysis directory be created if needed?}
 
-\item{overwrite_manifest}{Logical. Should an existing manifest be
-overwritten?}
+\item{overwrite_problem}{Logical. Should an existing problem.RData be
+overwritten in creation mode?}
+
+\item{overwrite_manifest}{Logical. Should an existing model_manifest.json be
+overwritten in creation mode?}
 }
 \value{
 An object of class c("<problem_type>_analysis", "analysis").
 }
 \description{
-Creates an analysis object linking a problem object to an output directory
-and a model manifest.
+An analysis links a \link{problem} to a directory containing
+a \link{manifest} setting out prediction models to run as well
+as stored prediction models and results.
 }
 \details{
-The manifest is intentionally analysis agnostic. It contains only:
-file_version, enabled models, relative result paths, and model parameters.
+This function creates or loads an analysis based on the specified
+directory \code{dir}.
+
+If called with a \link{problem} and optionally a \link{manifest}
+it will attempt to initialise a new analysis in the directory.
+
+Creation mode:
+
+\code{analysis(problem = prob, dir = "my_analysis")}
+
+Resume mode:
+
+\code{analysis(dir = "my_analysis")}
+
+In creation mode, the problem is saved to \code{problem.RData} inside the analysis
+directory, and a \code{model_manifest.json} file is created if one is not already
+present.
+
+In resume mode, the problem and manifest are read from the analysis directory.
 }

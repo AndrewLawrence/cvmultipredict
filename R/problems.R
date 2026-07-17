@@ -41,10 +41,11 @@ new_problem <- function(label, ytype, y, x, ids, folds) {
 }
 
 
-#' Construct a machine-learning problem
+
+#' Construct/extract a machine-learning problem
 #'
-#' Creates an object describing a supervised learning problem and the
-#' associated resampling scheme.
+#' Creates or extracts an object describing a supervised learning problem
+#'   and the associated resampling scheme.
 #'
 #' The problem type is encoded in the S3 class:
 #'
@@ -69,20 +70,34 @@ new_problem <- function(label, ytype, y, x, ids, folds) {
 #' @param ids Character vector of row identifiers.
 #' @param folds List of training indices, typically produced by
 #'   `caret::createMultiFolds()`.
+#' @param ... unused.
 #'
 #' @return An object of class c(ytype, "problem").
 #'
 #' @export
-problem <- function(label, ytype, y, x, ids, folds) {
-  new_problem(
-    label = label,
-    ytype = ytype,
-    y = y,
-    x = x,
-    ids = ids,
-    folds = folds
-  ) |>
-    validate_problem()
+problem <- function(x, ...) {
+  UseMethod("problem")
+}
+
+#' @rdname problem
+#' @export
+problem.default <- function(x, y, label, ytype, ids, folds, ...) {
+  validate_problem(
+    new_problem(
+      label = label,
+      ytype = ytype,
+      y = y,
+      x = x,
+      ids = ids,
+      folds = folds
+    )
+  )
+}
+
+#' @rdname problem
+#' @export
+problem.analysis <- function(x, ...) {
+  x[["problem"]]
 }
 
 
@@ -170,6 +185,99 @@ validate_problem <- function(x) {
 
   invisible(x)
 }
+
+# problem_storage.R
+
+#' Write an analysis problem to disk
+#'
+#' Saves the problem object to an RData file using the object name `problem`.
+#'
+#' @param problem A problem object.
+#' @param path Output path, usually file.path(dir, "problem.RData").
+#'
+#' @return The path, invisibly.
+#'
+#' @keywords internal
+write_analysis_problem <- function(problem, path) {
+  if (!inherits(problem, "problem")) {
+    stop("problem must inherit from class 'problem'.", call. = FALSE)
+  }
+
+  out_dir <- dirname(path)
+
+  if (!dir.exists(out_dir)) {
+    dir.create(out_dir, recursive = TRUE, showWarnings = FALSE)
+  }
+
+  save(problem, file = path)
+
+  invisible(path)
+}
+
+
+#' Read an analysis problem from disk
+#'
+#' Reads a problem object from an RData file. The file must contain an object
+#' named `problem`.
+#'
+#' @param path Path to problem.RData.
+#'
+#' @return A problem object.
+#'
+#' @keywords internal
+read_analysis_problem <- function(path) {
+  if (!file.exists(path)) {
+    stop("Problem file does not exist.", call. = FALSE)
+  }
+
+  env <- new.env(parent = emptyenv())
+  object_names <- load(path, envir = env)
+
+  if (!"problem" %in% object_names) {
+    stop(
+      "Problem file must contain an object named 'problem'.",
+      call. = FALSE
+    )
+  }
+
+  problem <- get("problem", envir = env)
+
+  if (!inherits(problem, "problem")) {
+    stop(
+      "Object named 'problem' does not inherit from class 'problem'.",
+      call. = FALSE
+    )
+  }
+
+  problem
+}
+
+
+#' Compare lightweight identity of two problem objects
+#'
+#' This checks whether two problem objects appear to describe the same problem
+#' without requiring full object identity.
+#'
+#' @param x A problem object.
+#' @param y A problem object.
+#'
+#' @return Logical scalar.
+#'
+#' @keywords internal
+identical_problem_identity <- function(x, y) {
+  if (!inherits(x, "problem") || !inherits(y, "problem")) {
+    return(FALSE)
+  }
+
+  identical(x$label, y$label) &&
+    identical(problem_type(x), problem_type(y)) &&
+    identical(nrow(x$x), nrow(y$x)) &&
+    identical(ncol(x$x), ncol(y$x)) &&
+    identical(length(x$y), length(y$y)) &&
+    identical(length(x$ids), length(y$ids)) &&
+    identical(length(x$folds), length(y$folds))
+}
+
 
 
 #' Print a problem

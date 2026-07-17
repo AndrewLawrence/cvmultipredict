@@ -10,6 +10,5 @@ default_model_manifest()
 A model manifest list.
 }
 \description{
-The manifest is analysis agnostic and can be reused across different
-problems or analysis directories.
+Create a default model manifest
 }

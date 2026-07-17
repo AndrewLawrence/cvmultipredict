@@ -4,12 +4,14 @@
 \alias{new_analysis}
 \title{Low-level analysis constructor}
 \usage{
-new_analysis(problem, dir, manifest_path)
+new_analysis(problem, dir, problem_path, manifest_path)
 }
 \arguments{
 \item{problem}{A problem object.}
 
 \item{dir}{Character scalar. Analysis output directory.}
+
+\item{problem_path}{Character scalar. Path to problem.RData.}
 
 \item{manifest_path}{Character scalar. Path to model_manifest.json.}
 }
