@@ -1,5 +1,5 @@
 
-test_that("analysis creates and loads", {
+test_that("analysis creation and loading", {
   path <- file.path(tempdir(), "my-test-dir")
 
   unlink(path, recursive = TRUE)
