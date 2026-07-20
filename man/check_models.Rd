@@ -6,16 +6,14 @@
 \alias{check_models.analysis}
 \title{Check runtime model status for an analysis}
 \usage{
-check_models(x, enabled_only = TRUE, ...)
+check_models(x, ...)
 
 \method{check_models}{default}(x, enabled_only = TRUE, ...)
 
-\method{check_models}{analysis}(x, enabled_only = TRUE, ...)
+\method{check_models}{analysis}(x, ...)
 }
 \arguments{
 \item{x}{An analysis object.}
-
-\item{enabled_only}{Logical. If TRUE, check only enabled models.}
 }
 \value{
 A data.frame containing model status.

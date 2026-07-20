@@ -3,17 +3,26 @@ Title: Multiple-model Prediction models with Cross-Validation
 Version: 0.0.0.9000
 Authors@R: 
     person("Andrew J.", "Lawrence", , "lawrenceajl@gmail.com", role = c("aut", "cre"))
-Description: A package to fit staged multiple-model prediction models 
-              with cross-validation.
+Description: A package to fit staged multiple-model prediction models with
+    cross-validation.
 License: MIT + file LICENSE
-Language: en-GB
-Encoding: UTF-8
-Roxygen: list(markdown = TRUE)
-RoxygenNote: 8.0.0
-Suggests: 
+Depends: 
+    R (>= 4.1.0)
+Imports: 
+    checkmate,
+    dplyr,
     jsonlite,
+    parsnip,
+    recipes,
+    rlang,
+    rsample,
+    workflows,
+    yardstick
+Suggests: 
     testthat (>= 3.0.0),
     withr
 Config/testthat/edition: 3
-Imports: 
-    rsample
+Encoding: UTF-8
+Language: en-GB
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 8.0.0

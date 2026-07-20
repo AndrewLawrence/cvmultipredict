@@ -10,29 +10,32 @@ default_model_manifest <- function() {
     file_version = 1L,
     models = list(
       linear = model_manifest_entry(
-        enabled = TRUE,
-        resultpath = "models/linear"
+        function_name = "linear",
+        resultpath = "models/",
+        params = list(pca = "auto", pca_ncomp = "auto")
       ),
       elasticnet = model_manifest_entry(
-        enabled = TRUE,
-        resultpath = "models/elasticnet"
+        function_name = "elasticnet",
+        resultpath = "models/",
+        params = list()
       ),
       xgboost = model_manifest_entry(
-        enabled = TRUE,
-        resultpath = "models/xgboost"
+        function_name = "xgboost",
+        resultpath = "models/",
+        params = list()
       ),
       neuralnet = model_manifest_entry(
-        enabled = TRUE,
-        resultpath = "models/neuralnet"
+        function_name = "neuralnet",
+        resultpath = "models/",
+        params = list()
       )
     )
   )
 }
 
-
 #' Create a model entry for a model manifest
 #'
-#' @param enabled Logical scalar. Should this model be requested?
+#' @param function_name the underlying model function used by cvmultipredict
 #' @param resultpath Character scalar. Relative path from the analysis directory
 #'   to the model output directory.
 #' @param params Named list. Model-specific fitting options.
@@ -41,16 +44,21 @@ default_model_manifest <- function() {
 #'
 #' @keywords internal
 model_manifest_entry <- function(
-  enabled = TRUE,
+  function_name,
   resultpath,
   params = list()
 ) {
+
+  if (missing(function_name)) {
+    stop("function must be supplied.", call. = FALSE)
+  }
+
   if (missing(resultpath)) {
     stop("resultpath must be supplied.", call. = FALSE)
   }
 
   list(
-    enabled = enabled,
+    function_name = function_name,
     resultpath = resultpath,
     params = params
   )
@@ -118,6 +126,9 @@ write_model_manifest <- function(manifest, path) {
 #'
 #' @export
 validate_model_manifest <- function(manifest) {
+
+  # ---- Top-level structure ----
+
   if (!is.list(manifest)) {
     stop("Manifest must be a list.", call. = FALSE)
   }
@@ -142,6 +153,8 @@ validate_model_manifest <- function(manifest) {
     stop("Manifest models list must contain at least one model.", call. = FALSE)
   }
 
+  # ---- Model names (canonical IDs) ----
+
   model_names <- names(manifest$models)
 
   if (is.null(model_names) || any(model_names == "")) {
@@ -152,7 +165,18 @@ validate_model_manifest <- function(manifest) {
     stop("Manifest model names must be unique.", call. = FALSE)
   }
 
+  # force folder-safe model names
+  if (
+    any(grepl("[/\\\\]", model_names)) ||
+      any(grepl("\\.\\.", model_names))
+  ) {
+    stop("Model names must be folder-safe (no '/' '\\\\' or '..').", call. = FALSE)
+  }
+
+  # ---- Per-model validation ----
+
   for (model_name in model_names) {
+
     entry <- manifest$models[[model_name]]
 
     if (!is.list(entry)) {
@@ -164,20 +188,23 @@ validate_model_manifest <- function(manifest) {
       )
     }
 
+    # function_name
     if (
-      is.null(entry$enabled) ||
-        !is.logical(entry$enabled) ||
-        length(entry$enabled) != 1 ||
-        is.na(entry$enabled)
+      is.null(entry$function_name) ||
+        !is.character(entry$function_name) ||
+        length(entry$function_name) != 1 ||
+        is.na(entry$function_name) ||
+        entry$function_name == ""
     ) {
       stop(
         "Manifest entry for model '",
         model_name,
-        "' must contain non-missing logical scalar enabled.",
+        "' must contain non-empty character scalar function_name.",
         call. = FALSE
       )
     }
 
+    # resultpath
     if (
       is.null(entry$resultpath) ||
         !is.character(entry$resultpath) ||
@@ -211,6 +238,7 @@ validate_model_manifest <- function(manifest) {
       )
     }
 
+    # params
     if (!is.null(entry$params) && !is.list(entry$params)) {
       stop(
         "Manifest entry for model '",

@@ -4,10 +4,10 @@
 \alias{model_manifest_entry}
 \title{Create a model entry for a model manifest}
 \usage{
-model_manifest_entry(enabled = TRUE, resultpath, params = list())
+model_manifest_entry(function_name, resultpath, params = list())
 }
 \arguments{
-\item{enabled}{Logical scalar. Should this model be requested?}
+\item{function_name}{the underlying model function used by cvmultipredict}
 
 \item{resultpath}{Character scalar. Relative path from the analysis directory
 to the model output directory.}

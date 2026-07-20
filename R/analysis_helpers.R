@@ -23,13 +23,7 @@ enabled_models.analysis <- function(x, ...) {
 enabled_models.default <- function(x, ...) {
   validate_model_manifest(x)
 
-  names(x$models)[
-    vapply(
-      x$models,
-      function(entry) isTRUE(entry$enabled),
-      logical(1)
-    )
-  ]
+  names(x$models)
 }
 
 
@@ -52,6 +46,7 @@ resultpaths.analysis <- function(x, ...) {
 }
 
 #' @rdname resultpaths
+#' @importFrom stats setNames
 #' @export
 resultpaths.default <- function(x, ...) {
   validate_model_manifest(x)
@@ -66,6 +61,53 @@ resultpaths.default <- function(x, ...) {
   )
 }
 
+#' Return function_name vector from a manifest
+#'
+#' @param x An analysis or its model manifest
+#' @param ... unused
+#'
+#' @return Named character vector.
+#'
+#' @export
+function_names <- function(x, ...) {
+  UseMethod("function_names")
+}
+
+#' @rdname function_names
+#' @export
+function_names.analysis <- function(x, ...) {
+  function_names.default(manifest(x))
+}
+
+#' @rdname function_names
+#' @export
+function_names.default <- function(x, ...) {
+  vapply(x[["models"]], \(kk) kk[["function_name"]], "chr")
+}
+
+#' Return model folder paths from a manifest
+#'
+#' @param x An analysis or its model manifest
+#' @param ... unused
+#'
+#' @return Named character vector.
+#'
+#' @export
+foldernames <- function(x, ...) {
+  UseMethod("foldernames")
+}
+
+#' @rdname foldernames
+#' @export
+foldernames.analysis <- function(x, ...) {
+  foldernames.default(manifest(x))
+}
+
+#' @rdname foldernames
+#' @export
+foldernames.default <- function(x, ...) {
+  file.path(resultpaths(x), enabled_models(x))
+}
 
 #' Return model setting params from a manifest
 #'
@@ -110,13 +152,11 @@ manifest_params.default <- function(x, ...) {
 #' resultpath exists inside the analysis directory.
 #'
 #' @param x An analysis object.
-#' @param enabled_only Logical. If TRUE, check only enabled models.
 #'
 #' @return A data.frame containing model status.
 #'
 #' @keywords internal
 check_models <- function(x,
-                         enabled_only = TRUE,
                          ...) {
   UseMethod("check_models")
 }
@@ -129,34 +169,50 @@ check_models.default <- function(x, enabled_only = TRUE, ...) {
 
 #' @rdname check_models
 #' @export
-check_models.analysis <- function(x, enabled_only = TRUE, ...) {
+check_models.analysis <- function(x, ...) {
   validate_analysis(x)
 
   manifest <- manifest(x)
 
-  model_names <- names(manifest$models)
+  model_names <- enabled_models(x)
 
-  if (isTRUE(enabled_only)) {
-    model_names <- enabled_models(manifest)
-  }
+  folders <- foldernames(x)
+  absolute_paths <- file.path(x$dir, folders)
 
-  resultpaths <- resultpaths(manifest)[model_names]
-  absolute_paths <- file.path(x$dir, resultpaths)
+  model_names <- function_names(x)
+
+  ns <- getNamespaceExports("cvmultipredict")
+  supported <- model_names %in% ns
+
+  has_wf <- file.exists(file.path(absolute_paths, "workflow.RData"))
+  has_finalmodel <- file.exists(file.path(absolute_paths, "finalmodel.RData"))
+  has_foldmodels <- vapply(
+    absolute_paths,
+    \(loc) {
+      all(
+        file.exists(
+          file.path(loc, paste0(names(problem(x)[["folds"]]), ".RData"))
+        )
+      )
+    },
+    FUN.VALUE = TRUE
+  )
+  has_results <- file.exists(file.path(absolute_paths, "results.RData"))
 
   data.frame(
+    label = model_names,
     model = model_names,
-    enabled = vapply(
-      manifest$models[model_names],
-      function(entry) isTRUE(entry$enabled),
-      logical(1)
-    ),
-    resultpath = unname(resultpaths),
-    path = unname(absolute_paths),
+    supported = supported,
     exists = dir.exists(absolute_paths),
+    has_wf = unname(has_wf),
+    has_finalmodel = unname(has_finalmodel),
+    has_foldmodels = unname(has_foldmodels),
+    has_results = unname(has_results),
+    resultpath = unname(folders),
+    path = unname(absolute_paths),
     stringsAsFactors = FALSE
   )
 }
-
 
 #' Return enabled models with missing result folders
 #'
@@ -180,9 +236,13 @@ pending_models.default <- function(x, ...) {
 #' @rdname pending_models
 #' @export
 pending_models.analysis <- function(x, ...) {
-  status <- check_models(x, enabled_only = TRUE)
+  status <- check_models(x)
 
-  status$model[!status$exists]
+  status$model[!status$exists |
+                 !status$has_wf |
+                 !status$has_finalmodel |
+                 !status$has_foldmodels |
+                 !status$has_results]
 }
 
 
@@ -208,7 +268,11 @@ existing_models.default <- function(x, ...) {
 #' @rdname existing_models
 #' @export
 existing_models.analysis <- function(x, ...) {
-  status <- check_models(x, enabled_only = TRUE)
+  status <- check_models(x)
 
-  status$model[!status$exists]
+  status$model[status$exists &
+                 status$has_wf &
+                 status$has_finalmodel &
+                 status$has_foldmodels &
+                 status$has_results]
 }
