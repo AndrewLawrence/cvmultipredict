@@ -10,12 +10,15 @@ Depends:
     R (>= 4.1.0)
 Imports: 
     checkmate,
+    cli,
     dplyr,
+    hardhat,
     jsonlite,
     parsnip,
     recipes,
     rlang,
     rsample,
+    vctrs,
     workflows,
     yardstick
 Suggests: 

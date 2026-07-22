@@ -99,7 +99,7 @@ linear.regression_analysis <-  function(x,
       workflows::add_recipe(rp) |>
       workflows::add_model(model)
 
-    save(wf, metricset, file = wf_loc)
+    save(wf, file = wf_loc)
   }
 
   # ~ final model -----------------------------------------------------------
@@ -200,7 +200,7 @@ linear.classification_analysis <-  function(x,
       workflows::add_recipe(rp) |>
       workflows::add_model(model)
 
-    save(wf, metricset, file = wf_loc)
+    save(wf, file = wf_loc)
   }
 
   # ~ final model -----------------------------------------------------------

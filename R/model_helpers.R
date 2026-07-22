@@ -40,5 +40,6 @@ metricset_regression <- function() {
 #' @keywords internal
 metricset_classification <- function() {
   metric_set(brier_class,
+             bss_class,
              roc_auc)
 }
