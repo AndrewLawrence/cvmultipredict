@@ -8,6 +8,9 @@ cvmultipredict <- function(x) {
   force(x)
   x <- validate_analysis(x)
 
+  # message:
+  msg_cvmp_start(x)
+
   mtab <- check_models(x)
 
   to_run <- mtab[["supported"]]
@@ -18,7 +21,33 @@ cvmultipredict <- function(x) {
 
   res <- lapply(
     run_ints,
-    \(.x) eval(call_from_analysis(x, .x), envir = list(x = x))
+    \(.x) {
+      msg_model_start(mtab[["label"]][.x])
+      r <- eval(call_from_analysis(x, .x), envir = list(x = x))
+      msg_model_finish(mtab[["label"]][.x])
+      r
+    }
   )
   res
+}
+
+msg_cvmp_start <- function(x) {
+  p <- problem(x)
+  force(p)
+  m <- manifest(x)
+
+  cli::cli_alert_info(
+    "running cvmultipredict on {.val {p[['label']]}}"
+  )
+  cli::cli_alert_info(
+    "a {.val {problem_type(p)}} with {.val {nrow(p$x)}} observations and {.val {ncol(p$x)}} predictors" #nolint
+  )
+  cli::cli_text("---")
+  cli::cli_text("Models:")
+  for ( i in seq_along(m$models) ) {
+    cli::cli_alert_info(
+      "{.val {names(m$models)[[i]]}} - {.val {m$models[[i]][['function_name']]}}"
+    )
+  }
+  cli::cli_text("---")
 }

@@ -287,12 +287,12 @@ identical_problem_identity <- function(x, y) {
 #'
 #' @export
 print.problem <- function(x, ...) {
-  cat("\n")
-  cat("Label:", x$label, "\n")
-  cat("Type :", problem_type(x), "\n")
-  cat("Rows :", nrow(x$x), "\n")
-  cat("Vars :", ncol(x$x), "\n")
-  cat("Folds:", length(x$folds), "\n")
+
+  cli::cli_text("{.field Label} : {.val {x$label}}")
+  cli::cli_text("{.field Type}  : {.val {problem_type(x)}}")
+  cli::cli_text("{.field Rows}  : {.val {nrow(x$x)}}")
+  cli::cli_text("{.field Vars}  : {.val {ncol(x$x)}}")
+  cli::cli_text("{.field Folds} : {.val {length(x$folds)}}")
 
   invisible(x)
 }
@@ -305,34 +305,7 @@ print.problem <- function(x, ...) {
 #'
 #' @export
 summary.problem <- function(object, ...) {
-  out <- list(
-    label = object$label,
-    ytype = problem_type(object),
-    n = nrow(object$x),
-    p = ncol(object$x),
-    n_folds = length(object$folds)
-  )
-
-  class(out) <- c(
-    paste0("summary.", problem_type(object)),
-    "summary.problem"
-  )
-
-  out
-}
-
-
-#' @export
-print.summary.problem <- function(x, ...) {
-  cat("Problem summary\n")
-  cat("----------------\n")
-  cat("Label   :", x$label, "\n")
-  cat("Type    :", x$ytype, "\n")
-  cat("Rows    :", x$n, "\n")
-  cat("Features:", x$p, "\n")
-  cat("Folds   :", x$n_folds, "\n")
-
-  invisible(x)
+  print(object)
 }
 
 #' @export

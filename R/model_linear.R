@@ -104,7 +104,7 @@ linear.regression_analysis <-  function(x,
 
   # ~ final model -----------------------------------------------------------
   if ( !file.exists(fm_loc) ) {
-    cat("Linear running: final model\n")
+    cli::cli_alert_info("linear running: final model")
     m <- fit(wf, data = df)
     save(m, file = fm_loc)
   } else {
@@ -121,16 +121,21 @@ linear.regression_analysis <-  function(x,
     fids <- folds[[i]]
     flab <- names(folds)[[i]]
     if ( !file.exists(fname) ) {
-      cat("Linear running: ", i, " / ", length(folds), "\n")
+      msg_cv_running(model = "linear",
+                     id = i,
+                     nid = length(folds))
       m <- fit(wf, data = df[fids, ])
       save(m, file = fname)
     } else {
+      msg_cv_loading(model = "linear",
+                     id = i,
+                     nid = length(folds))
       load(fname)
     }
     preds <<- dplyr::bind_rows(
       preds,
-      predict(m, new_data = df, type = "numeric") |>
-        bind_cols(y = df$y) |>
+      predict(m, new_data = df[-fids, ], type = "numeric") |>
+        bind_cols(y = df[-fids, "y"]) |>
         bind_cols(label = flab)
     )
   })
@@ -141,7 +146,6 @@ linear.regression_analysis <-  function(x,
     metricset(truth = "y", estimate = ".pred")
 
   # ~ end -------------------------------------------------------------------
-  cat("Processing Completed.\n")
   save(preds, results, file = results_loc)
   invisible(results)
 }
@@ -171,7 +175,7 @@ linear.classification_analysis <-  function(x,
     pca <- pca_auto_check
   }
   if ( pca_ncomp == "auto" ) {
-    pca_ncomp <- floor((n - 50) / 10)
+    pca_ncomp <- pmax(1L, floor((n - 50) / 10))
   }
 
   # ~ setup locations -------------------------------------------------------
@@ -205,7 +209,7 @@ linear.classification_analysis <-  function(x,
 
   # ~ final model -----------------------------------------------------------
   if ( !file.exists(fm_loc) ) {
-    cat("Linear running: final model\n")
+    cli::cli_alert_info("linear running: final model")
     m <- fit(wf, data = df)
     save(m, file = fm_loc)
   } else {
@@ -224,18 +228,23 @@ linear.classification_analysis <-  function(x,
     fids <- folds[[i]]
     flab <- names(folds)[[i]]
     if ( !file.exists(fname) ) {
-      cat("Linear running: ", i, " / ", length(folds), "\n")
+      msg_cv_running(model = "linear",
+                     id = i,
+                     nid = length(folds))
       m <- fit(wf, data = df[fids, ])
       save(m, file = fname)
     } else {
+      msg_cv_loading(model = "linear",
+                     id = i,
+                     nid = length(folds))
       load(fname)
     }
     preds <<- dplyr::bind_rows(
       preds,
-      predict(m, new_data = df, type = "prob") |>
+      predict(m, new_data = df[-fids, ], type = "prob") |>
         dplyr::select(-1) |>
         setNames(".pred") |>
-        bind_cols(y = df$y) |>
+        bind_cols(y = df[-fids, "y"]) |>
         bind_cols(label = flab)
     )
   })
@@ -247,7 +256,6 @@ linear.classification_analysis <-  function(x,
     metricset(truth = "y", ".pred", event_level = "second")
 
   # ~ end -------------------------------------------------------------------
-  cat("Linear Class Processing Completed.\n")
   save(preds, results, file = results_loc)
   invisible(results)
 }

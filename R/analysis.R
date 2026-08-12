@@ -310,19 +310,25 @@ validate_analysis <- function(x) {
 print.analysis <- function(x, ...) {
   validate_analysis(x)
 
-  status <- check_models(x, enabled_only = TRUE)
+  status <- check_models(x, enabled_only = TRUE) #nolint
 
-  cat("\n")
-  cat("Analysis\n")
-  cat("--------\n")
-  cat("Problem :", x$problem$label, "\n")
-  cat("Type    :", problem_type(x$problem), "\n")
-  cat("Dir     :", x$dir, "\n")
-  cat("Problem file:", x$problem_path, "\n")
-  cat("Manifest    :", x$manifest_path, "\n")
-  cat("Models      :", nrow(status), "enabled\n")
-  cat("Existing    :", sum(status$exists), "result folders found\n")
-  cat("Pending     :", sum(!status$exists), "result folders missing\n")
+  cli::cli_h1("Analysis")
+
+  cli::cli_text("{.field Problem} : {.val {x$problem$label}}")
+  cli::cli_text("{.field Type} : {.val {problem_type(x$problem)}}")
+  cli::cli_text("{.field Directory} : {.path {x$dir}}")
+  cli::cli_text("{.field Problem file} : {.file {x$problem_path}}")
+  cli::cli_text("{.field Manifest} : {.file {x$manifest_path}}")
+
+  cli::cli_h2("Models")
+
+  cli::cli_text("{.field Enabled} : {.val {nrow(status)}} enabled")
+  cli::cli_text("{.field Existing} : {.val {sum(status$exists)}} result folders found")  #nolint
+  cli::cli_text("{.field Pending} : {.val {sum(!status$exists)}} result folders missing")  #nolint
+
+  cli::cli_h2("Problem")
+
+  print(problem(x))
 
   invisible(x)
 }
@@ -337,63 +343,5 @@ print.analysis <- function(x, ...) {
 #'
 #' @export
 summary.analysis <- function(object, ...) {
-  validate_analysis(object)
-
-  manifest <- manifest(object)
-  status_all <- check_models(object, enabled_only = FALSE)
-  status_enabled <- status_all[status_all$enabled, , drop = FALSE]
-
-  out <- list(
-    problem_label = object$problem$label,
-    problem_type = problem_type(object$problem),
-    n = nrow(object$problem$x),
-    p = ncol(object$problem$x),
-    n_folds = length(object$problem$folds),
-    dir = object$dir,
-    problem_path = object$problem_path,
-    manifest_path = object$manifest_path,
-    file_version = manifest$file_version,
-    model_status = status_all,
-    n_models = nrow(status_all),
-    n_enabled = sum(status_all$enabled),
-    n_existing = sum(status_enabled$exists),
-    n_pending = sum(!status_enabled$exists)
-  )
-
-  class(out) <- c(
-    paste0("summary.", problem_type(object$problem), "_analysis"),
-    "summary.analysis"
-  )
-
-  out
-}
-
-#' @export
-print.summary.analysis <- function(x, ...) {
-  cat("Analysis summary\n")
-  cat("----------------\n")
-  cat("Problem :", x$problem_label, "\n")
-  cat("Type    :", x$problem_type, "\n")
-  cat("Rows    :", x$n, "\n")
-  cat("Features:", x$p, "\n")
-  cat("Folds   :", x$n_folds, "\n")
-  cat("Dir     :", x$dir, "\n")
-  cat("Problem file:", x$problem_path, "\n")
-  cat("Manifest    :", x$manifest_path, "\n")
-  cat("Version     :", x$file_version, "\n")
-  cat("\n")
-  cat("Models\n")
-  cat("------\n")
-  cat("Total   :", x$n_models, "\n")
-  cat("Enabled :", x$n_enabled, "\n")
-  cat("Existing:", x$n_existing, "\n")
-  cat("Pending :", x$n_pending, "\n")
-  cat("\n")
-
-  print_cols <- colnames(x$model_status)
-  print_cols <- print_cols[print_cols != "path"]
-
-  print(x$model_status[, print_cols], row.names = FALSE)
-
-  invisible(x)
+  print(object)
 }

@@ -1,3 +1,31 @@
+#nolint start
+# Dev Note: key differences between tidymodels code written for regression and
+#               binary classification are as follows:
+#
+# 1) The model and metricset change:
+#     model = parsnip::logistic_reg() rather than linear_reg
+#     metricset = metricset_classification() rather than metricset_regression
+#
+# 2) predict.workflow type = "prob" rather than "numeric"
+#     postprocess to select the second column (cvmp package assumes this)
+#
+#     i.e.:
+        # preds <- predict(m, new_data = df, type = "numeric") |>
+        #   bind_cols(y = df$y) |>
+        #   bind_cols(label = "apparent")
+#       BECOMES:
+        # predict(m, new_data = df, type = "prob") |>
+        #   dplyr::select(-1) |>
+        #   setNames(".pred") |>
+        #   bind_cols(y = df$y) |>
+        #   bind_cols(label = "apparent")
+#
+# 3) metricset must specify the event_level:
+#     metricset(truth = "y", ".pred")
+#   becomes
+#     metricset(truth = "y", ".pred", event_level = "second")
+#nolint end
+
 
 #' @importFrom checkmate assertIntegerish assert_class
 #' @keywords internal
@@ -42,4 +70,30 @@ metricset_classification <- function() {
   metric_set(brier_class,
              bss_class,
              roc_auc)
+}
+
+#' @importFrom cli cli_alert_info
+#' @keywords internal
+msg_model_start <- function(x) {
+  cli::cli_bullets(c(">" = "Model: {.val {x}}"))
+}
+
+#' @keywords internal
+msg_model_finish <- function(x) {
+  cli::cli_alert_info("{.val {x}} complete")
+  cli::cli_text("")
+}
+
+#' @keywords internal
+msg_cv_running <- function(model, id, nid) {
+  cli::cli_alert_info(
+    "running - model: {.val {model}}, CV {.int {id}} / {.int {nid}}"
+  )
+}
+
+#' @keywords internal
+msg_cv_loading <- function(model, id, nid) {
+  cli::cli_alert_info(
+    "loading - model: {.val {model}}, CV {.int {id}} / {.int {nid}}"
+  )
 }
