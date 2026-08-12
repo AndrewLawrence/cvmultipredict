@@ -70,7 +70,7 @@ linear.regression_analysis <-  function(x,
     pca <- pca_auto_check
   }
   if ( pca_ncomp == "auto" ) {
-    pca_ncomp <- floor((n - 50) / 10)
+    pca_ncomp <- pmax(1L, floor((n - 50) / 10))
   }
 
   # ~ setup locations -------------------------------------------------------
