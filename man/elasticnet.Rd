@@ -78,7 +78,7 @@ Set this to 0.0 to consider the time-consuming pure L2 Ridge when tuning.}
 \item{metricset}{used internally to specify metrics}
 
 \item{tuning_resample_fxn}{a string containing a function name from \link[rsample:rsample]{rsample}
-which will be used to resample the for tuning purposes
+which will be used to resample the data for tuning purposes
 (e.g. \link[rsample:bootstraps]{"bootstraps"}, \link[rsample:vfold_cv]{"vfoldcv"})}
 
 \item{tuning_resample_args}{list of arguments to pass to \code{tuning_resample_fxn}}
@@ -111,5 +111,5 @@ hyperparameter (alpha) is expensive (and often in practice less impactful).
 Furthermore, the maximum lambda depends on the value of alpha selected.
 }
 \seealso{
-glmnet::glmnet
+\link[glmnet:glmnet]{glmnet::glmnet} \link[parsnip:linear_reg]{parsnip::linear_reg} \link[parsnip:logistic_reg]{parsnip::logistic_reg}
 }

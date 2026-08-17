@@ -37,12 +37,12 @@
 #'   Set this to 0.0 to consider the time-consuming pure L2 Ridge when tuning.
 #' @param metricset used internally to specify metrics
 #' @param tuning_resample_fxn a string containing a function name from [rsample]
-#'   which will be used to resample the for tuning purposes
+#'   which will be used to resample the data for tuning purposes
 #'   (e.g. ["bootstraps"][rsample::bootstraps], ["vfoldcv"][rsample::vfold_cv])
 #' @param tuning_resample_args list of arguments to pass to `tuning_resample_fxn`
 #' @param ... unused.
 #'
-#' @seealso glmnet::glmnet
+#' @seealso [glmnet::glmnet] [parsnip::linear_reg] [parsnip::logistic_reg]
 #' @export
 elasticnet <- function(x,
                        folder,
@@ -122,8 +122,10 @@ elasticnet.regression_analysis <-  function(
 
   # ~ workflow --------------------------------------------------------------
   if ( file.exists(wf_loc) ) {
+    cli::cli_alert_info("elasticnet loading: workflow")
     load(wf_loc)
   } else {
+    cli::cli_alert_info("elasticnet generating: workflow")
 
     wf <- workflows::workflow()
 
@@ -152,11 +154,13 @@ elasticnet.regression_analysis <-  function(
   }
 
   # ~ final model -----------------------------------------------------------
-  if ( !file.exists(fm_loc) ) {
-    resample_args <- append(list(data = df), tuning_resample_args)
-
+  if ( file.exists(fm_loc) ) {
+    cli::cli_alert_info("elasticnet loading: final model")
+    load(fm_loc)
+  } else {
     cli::cli_alert_info("elasticnet tuning: final model")
     # make a resampling object:
+    resample_args <- append(list(data = df), tuning_resample_args)
     rs <- do.call(get(tuning_resample_fxn, envir = asNamespace("rsample")),
                   resample_args)
     # run tuning:
@@ -175,9 +179,6 @@ elasticnet.regression_analysis <-  function(
     cli::cli_alert_info("elasticnet running: final model")
     m <- fit(fwf, data = df)
     save(m, tuning_results, file = fm_loc)
-  } else {
-    cli::cli_alert_info("elasticnet loading: final model")
-    load(fm_loc)
   }
   # extract predictions:
   preds <- predict(m, new_data = df, type = "numeric") |>
@@ -194,7 +195,12 @@ elasticnet.regression_analysis <-  function(
       fname <- fold_locs[[i]]
       fids <- folds[[i]]
       flab <- names(folds)[[i]]
-      if ( !file.exists(fname) ) {
+      if ( file.exists(fname) ) {
+        msg_cv_loading(model = "elasticnet",
+                       id = i,
+                       nid = length(folds))
+        load(fname)
+      } else {
         msg_cv_running(model = "elasticnet",
                        id = i,
                        nid = length(folds))
@@ -222,11 +228,6 @@ elasticnet.regression_analysis <-  function(
         m <- fit(f_wf, data = df[fids, ])
         save(m, file = fname)
 
-      } else {
-        msg_cv_loading(model = "elasticnet",
-                       id = i,
-                       nid = length(folds))
-        load(fname)
       }
       preds <<- dplyr::bind_rows(
         preds,
@@ -293,8 +294,10 @@ elasticnet.classification_analysis <-  function(
 
   # ~ workflow --------------------------------------------------------------
   if ( file.exists(wf_loc) ) {
+    cli::cli_alert_info("elasticnet loading: workflow")
     load(wf_loc)
   } else {
+    cli::cli_alert_info("elasticnet generating: workflow")
 
     wf <- workflows::workflow()
 
@@ -323,11 +326,14 @@ elasticnet.classification_analysis <-  function(
   }
 
   # ~ final model -----------------------------------------------------------
-  if ( !file.exists(fm_loc) ) {
-    resample_args <- append(list(data = df), tuning_resample_args)
-
+  if ( file.exists(fm_loc) ) {
+    cli::cli_alert_info("elasticnet loading: final model")
+    load(fm_loc)
+  } else {
     cli::cli_alert_info("elasticnet tuning: final model")
+
     # make a resampling object:
+    resample_args <- append(list(data = df), tuning_resample_args)
     rs <- do.call(get(tuning_resample_fxn, envir = asNamespace("rsample")),
                   resample_args)
     # run tuning:
@@ -348,10 +354,8 @@ elasticnet.classification_analysis <-  function(
     cli::cli_alert_info("elasticnet running: final model")
     m <- fit(fwf, data = df)
     save(m, tuning_results, file = fm_loc)
-  } else {
-    cli::cli_alert_info("elasticnet loading: final model")
-    load(fm_loc)
   }
+
   # extract predictions:
   preds <- predict(m, new_data = df, type = "prob") |>
     dplyr::select(-1) |>
@@ -403,10 +407,10 @@ elasticnet.classification_analysis <-  function(
       }
       preds <<- dplyr::bind_rows(
         preds,
-        predict(m, new_data = df[fids, ], type = "prob") |>
+        predict(m, new_data = df[-fids, ], type = "prob") |>
           dplyr::select(-1) |>
           setNames(".pred") |>
-          bind_cols(y = df[fids, "y"]) |>
+          bind_cols(y = df[-fids, "y"]) |>
           bind_cols(label = flab)
       )
     })

@@ -20,6 +20,7 @@
 #' @param metricset used internally to specify metrics
 #' @param ... unused.
 #'
+#' @seealso  [parsnip::linear_reg] [parsnip::logistic_reg]
 #' @export
 linear <- function(x,
                    folder,

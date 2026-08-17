@@ -11,6 +11,7 @@ Depends:
 Imports: 
     checkmate,
     cli,
+    dials,
     dplyr,
     glmnet,
     hardhat,

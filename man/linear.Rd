@@ -58,3 +58,6 @@ predictors is used depending on settings for \code{pca} and \code{pca_ncomp}
 For pca = "auto" calculations,
 n is number of samples, p is number of predictors.
 }
+\seealso{
+\link[parsnip:linear_reg]{parsnip::linear_reg} \link[parsnip:logistic_reg]{parsnip::logistic_reg}
+}

@@ -1,12 +1,15 @@
 RData
+XGBoost
 elasticnet
 glmnet
 glmnet's
 json
+ntrees
 params
 pca
 resultpath
 rsample
 rset
 untuned
+xgboost
 ytype

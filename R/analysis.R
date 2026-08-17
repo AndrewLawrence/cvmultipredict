@@ -1,5 +1,7 @@
 # analysis.R
 
+# an analysis links a problem to a folder and a manifest of model settings
+
 #' Low-level analysis constructor
 #'
 #' @param problem A problem object.
