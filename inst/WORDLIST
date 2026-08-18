@@ -5,11 +5,13 @@ glmnet
 glmnet's
 json
 ntrees
+nullmetrics
 params
 pca
 resultpath
 rsample
 rset
+tibble
 untuned
 xgboost
 ytype
