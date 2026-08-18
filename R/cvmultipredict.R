@@ -1,8 +1,13 @@
 
-#' Apply to an analysis to check/run models
-#' @param x an [analysis] object linking a [problem] and a [manifest] to a
-#'    working directory
-#' @return a list of results from the models which were run
+#' Apply to an analysis to run models or collate results from disk
+#'
+#' @param x an [analysis] object (which links a [problem] and a [manifest] to a
+#'    working directory)
+#'
+#' @return A named list containing, for each model in the [manifest],
+#'     a data.frame of performance metrics.
+#'
+#' @seealso [problem] [manifest] [analysis] [pool_results]
 #' @export
 cvmultipredict <- function(x) {
   force(x)
