@@ -70,13 +70,16 @@ plot_pooled_results <- function(x) {
 #'
 #' @param x tuning results, either from [tune_grid][tune::tune_grid],
 #'     or logged to disk by a [cvmultipredict] model.
+#' @param se - flag: include error bars for +/- 1SD of performance?
+#'     SD is calculated over the tuning CV resamples.
 #'
 #' @return A [ggplot object][ggplot2::ggplot]
 #' @importFrom tidyr pivot_longer
 #' @export
-plot_tuning_results <- function(x) {
+plot_tuning_results <- function(x, se = FALSE) {
   checkmate::assert_data_frame(x, col.names = "named")
   checkmate::assert_subset(c(".metric", "mean"), colnames(x))
+  checkmate::assert_flag(se)
 
   idx <- which(colnames(x) == ".metric") - 1
   if (idx == 1L) {
@@ -95,11 +98,18 @@ plot_tuning_results <- function(x) {
     tidyr::pivot_longer(cols = 1:idx,
                         names_to = "hyperparameter",
                         values_to = "hyperparameter_value") |>
-    ggplot2::ggplot(ggplot2::aes(y = mean,
-                                 x = .data$hyperparameter_value))
+    ggplot2::ggplot(ggplot2::aes(y = .data$mean,
+                                 x = .data$hyperparameter_value,
+                                 ymin = .data$mean - .data$std_err,
+                                 ymax = .data$mean + .data$std_err))
+
+  if ( se ) {
+    p <- p + ggplot2::geom_errorbar()
+  }
 
   if (".iter" %in% colnames(x)) {
-    p <- p + ggplot2::geom_point(ggplot2::aes(colour = .data$.iter))
+    p <- p +
+      ggplot2::geom_point(ggplot2::aes(colour = .data$.iter))
   } else {
     p <- p + ggplot2::geom_point()
   }

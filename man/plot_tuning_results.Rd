@@ -4,11 +4,16 @@
 \alias{plot_tuning_results}
 \title{plot_tuning_results}
 \usage{
-plot_tuning_results(x)
+plot_tuning_results(x, se = FALSE)
 }
 \arguments{
 \item{x}{tuning results, either from \link[tune:tune_grid]{tune_grid},
 or logged to disk by a \link{cvmultipredict} model.}
+
+\item{se}{\itemize{
+\item flag: include error bars for +/- 1SD of performance?
+SD is calculated over the tuning CV resamples.
+}}
 }
 \value{
 A \link[ggplot2:ggplot]{ggplot object}
