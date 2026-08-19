@@ -47,8 +47,9 @@ xgboost(
   tuning_bayes_maxit = 50L,
   tuning_bayes_minit = 10L,
   metricset = metricset_regression(),
-  tuning_resample_fxn = "bootstraps",
-  tuning_resample_args = list(times = 25L, strata = "y"),
+  tuning_resample_fxn = "vfold_cv",
+  tuning_resample_args = list(v = 10, repeats = 1, strata = "y"),
+  check_futility = TRUE,
   ...
 )
 
@@ -64,8 +65,9 @@ xgboost(
   tuning_bayes_maxit = 50L,
   tuning_bayes_minit = 10L,
   metricset = metricset_classification(),
-  tuning_resample_fxn = "bootstraps",
-  tuning_resample_args = list(times = 25L, strata = "y"),
+  tuning_resample_fxn = "vfold_cv",
+  tuning_resample_args = list(v = 10, repeats = 1, strata = "y"),
+  check_futility = TRUE,
   ...
 )
 }
@@ -111,6 +113,11 @@ which will be used to resample the data for tuning purposes
 (e.g. \link[rsample:bootstraps]{"bootstraps"}, \link[rsample:vfold_cv]{"vfoldcv"})}
 
 \item{tuning_resample_args}{list of arguments to pass to \code{tuning_resample_fxn}}
+
+\item{check_futility}{logical. Futility checks on the finalmodel
+determine whether cross-validation should be conducted.
+If \code{check_futility = FALSE} then cross-validation is
+always conducted.}
 }
 \description{
 Fits Extreme Gradient Boosting (XGBoost) models to the problem.

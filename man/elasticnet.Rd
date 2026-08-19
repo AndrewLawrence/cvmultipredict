@@ -37,6 +37,7 @@ elasticnet(
   metricset = metricset_regression(),
   tuning_resample_fxn = "bootstraps",
   tuning_resample_args = list(times = 30L, strata = "y"),
+  check_futility = TRUE,
   ...
 )
 
@@ -50,6 +51,7 @@ elasticnet(
   metricset = metricset_classification(),
   tuning_resample_fxn = "bootstraps",
   tuning_resample_args = list(times = 30L, strata = "y"),
+  check_futility = TRUE,
   ...
 )
 }
@@ -82,6 +84,11 @@ which will be used to resample the data for tuning purposes
 (e.g. \link[rsample:bootstraps]{"bootstraps"}, \link[rsample:vfold_cv]{"vfoldcv"})}
 
 \item{tuning_resample_args}{list of arguments to pass to \code{tuning_resample_fxn}}
+
+\item{check_futility}{logical. Futility checks on the finalmodel
+determine whether cross-validation should be conducted.
+If \code{check_futility = FALSE} then cross-validation is
+always conducted.}
 }
 \description{
 Fits to data a model linear in the predictors but with regularisation to

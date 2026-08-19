@@ -637,7 +637,7 @@ tune_or_fix <- function(x) {
   }
 }
 
-#' @importFrom dplyr pull
+#' @importFrom dplyr pull filter
 #' @importFrom stats var
 #' @keywords internal
 futility_check_xgboost <- function(
@@ -691,11 +691,11 @@ futility_check_xgboost <- function(
   test_metric <- ifelse(type == "regression", "mse", "brier_class")
 
   null_perf <- nullmetrics(y) |>
-    filter(.data$.metric == test_metric) %>%
+    dplyr::filter(.data$.metric == test_metric) |>
     dplyr::pull(.data$.estimate)
 
   cv_perf <- tuning |>
-    filter(.data$.metric == test_metric) |>
+    dplyr::filter(.data$.metric == test_metric) |>
     dplyr::pull(.data$mean) |>
     min(na.rm = TRUE)
 
