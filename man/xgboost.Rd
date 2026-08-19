@@ -136,22 +136,26 @@ underlying default will be used (passing null)
 Length 2 vectors are assumed to specify a range of hyperparameter
 values to explore.
 }
-\section{Default Behaviour}{
+\section{Hyperparameter Tuning}{
 
-Tunes the following over a \link[dials:grid_space_filling]{space filling grid}
-with resolution^dimensionality = 3^5 = 243 entries:
+By default, tunes the following hyperparameters over a
+\link[dials:grid_space_filling]{space filling grid}
+with number of entries set to resolution^dimensionality = 3^5 = 243.
+Because this is a space-filling grid substantially more unique values
+of each hyperparameter are tested than the resolution implies.
 \itemize{
-\item ntrees - number of trees in the ensemble
-\item tree_depth - number of splits
-\item learn_rate - (i.e. eta) step-size shrinkage used to prevent overfitting
-\item min_n - threshold number of observations in a potential leaf node for
+\item \code{ntrees} - number of trees in the ensemble
+\item \code{tree_depth} - number of splits
+\item \code{learn_rate} - (i.e. eta) step-size shrinkage used to prevent overfitting
+\item \code{min_n} - threshold number of observations in a potential leaf node for
 further partitioning to be considered. Larger == more conservative.
-\item loss_reduction - threshold minimum reduction in the loss function required
+\item \code{loss_reduction} - threshold minimum reduction in the loss function required
 to make a further partition on a leaf node. Larger == more conservative.
 }
 
 After initial grid tuning, \link[tune:tune_bayes]{Bayesian optimisation}
 (Gaussian Process model) is applied to fine tune for 10-50 iterations.
+This can be turned off by setting \code{tuning_bayes_maxit = 0L}.
 
 The following hyperparameters are fixed / untuned:
 \itemize{
@@ -161,6 +165,16 @@ The following hyperparameters are fixed / untuned:
 
 All other values remain at the defaults of \link[xgboost:xgboost]{xgboost::xgboost}
 via \link[parsnip:xgb_train]{parsnip::xgb_train}
+
+Hyperparameter tuning is often vital to avoid overfitting and produce
+good model performance. Motivated by this the default tuning scheme
+is thorough and rather time-consuming to run.
+While reducing the number of points in the space-filling grid
+and/or removing bayesian optimisation can still produce good results,
+it is safer to leverage knowledge about the problem to tailor
+the tuning by fixing hyperparameters. This allows the density of
+hyperparameter sampling to be maintained with a lower value of
+\code{tuning_grid_n}.
 }
 
 \seealso{
