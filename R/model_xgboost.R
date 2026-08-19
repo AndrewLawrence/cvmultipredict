@@ -65,6 +65,10 @@
 #'   which will be used to resample the data for tuning purposes
 #'   (e.g. ["bootstraps"][rsample::bootstraps], ["vfoldcv"][rsample::vfold_cv])
 #' @param tuning_resample_args list of arguments to pass to `tuning_resample_fxn`
+#' @param check_futility logical. Futility checks on the finalmodel
+#'     determine whether cross-validation should be conducted.
+#'     If `check_futility = FALSE` then cross-validation is
+#'     always conducted.
 #' @param ... unused.
 #'
 #' @seealso [xgboost::xgboost] [parsnip::boost_tree]
@@ -124,8 +128,9 @@ xgboost.regression_analysis <-  function(
   tuning_bayes_maxit = 50L,
   tuning_bayes_minit = 10L,
   metricset = metricset_regression(),
-  tuning_resample_fxn = "bootstraps",
-  tuning_resample_args = list(times = 25L, strata = "y"),
+  tuning_resample_fxn = "vfold_cv",
+  tuning_resample_args = list(v = 10, repeats = 1, strata = "y"),
+  check_futility = TRUE,
   ...
 ) {
   checkmate::assert_int(tuning_grid_n, lower = 0L)
@@ -282,7 +287,14 @@ xgboost.regression_analysis <-  function(
 
   # futility check - i.e. if the tuned model is
   #               intercept only then don't cross-validate.
-  FUTILITY <- futility_check_xgboost(preds)
+  if ( check_futility ) {
+    FUTILITY <- futility_check_xgboost(x = preds,
+                                       y = df$y,
+                                       tuning = tuning_results,
+                                       type = "regression")
+  } else {
+    FUTILITY <- FALSE
+  }
 
   # ~ fold models -----------------------------------------------------------
   if ( !FUTILITY ) {
@@ -370,8 +382,9 @@ xgboost.classification_analysis <-  function(
   tuning_bayes_maxit = 50L,
   tuning_bayes_minit = 10L,
   metricset = metricset_classification(),
-  tuning_resample_fxn = "bootstraps",
-  tuning_resample_args = list(times = 25L, strata = "y"),
+  tuning_resample_fxn = "vfold_cv",
+  tuning_resample_args = list(v = 10, repeats = 1, strata = "y"),
+  check_futility = TRUE,
   ...
 ) {
   checkmate::assert_int(tuning_grid_n, lower = 0L)
@@ -532,7 +545,14 @@ xgboost.classification_analysis <-  function(
 
   # futility check - i.e. if the tuned model is
   #               intercept only then don't cross-validate.
-  FUTILITY <- futility_check_xgboost(preds)
+  if ( check_futility ) {
+    FUTILITY <- futility_check_xgboost(x = preds,
+                                       y = df$y,
+                                       tuning = tuning_results,
+                                       type = "classification")
+  } else {
+    FUTILITY <- FALSE
+  }
 
   # ~ fold models -----------------------------------------------------------
   if ( !FUTILITY ) {
@@ -617,11 +637,21 @@ tune_or_fix <- function(x) {
   }
 }
 
+#' @importFrom dplyr pull
 #' @importFrom stats var
 #' @keywords internal
-futility_check_xgboost <- function(x) {
+futility_check_xgboost <- function(
+  x,
+  y,
+  tuning,
+  type = c("classification", "regression")
+) {
   # x is a apparent validity predictions data.frame from the "final model"
   #   tuned and fit to the full data.
+  #
+  # y is the observed values of the data (either a factor or numeric)
+  #
+  # tuning is a collated tuning dataset from final model (i.e. tuning_results)
   #
   # If futile this function returns: TRUE (otherwise FALSE)
   #
@@ -631,16 +661,49 @@ futility_check_xgboost <- function(x) {
   #   to cross-validate.
   #
   # If the final tuned model is an intercept-only model then
-  #   predictions will be constant, so the futility check is for zero
+  #   predictions will be constant, so one futility check is for zero
   #   variance.
+  #
+  # For xgboost it's very unlikely to produce zero variance predictions.
+  #   A better check for xgb is if the holdout error from the finalmodel
+  #   tuning_grid is not better than the "null" error of an intercept-only
+  #   model.
 
+  type <- match.arg(type)
+
+  # init. as non-futile:
+  chk <- FALSE
+
+  # check 1: zero variance
   v <- var(x[[".pred"]])
-  chk <- v < .Machine$double.eps
-
-  if ( chk ) {
+  if ( v <  .Machine$double.eps ) {
     cli::cli_alert_warning(
       "cross-validation not run: zero-variance final-model preds"
     )
+    chk <- TRUE
+  }
+
+  # check 2: tuning hold-out error not better than null
+  #   note: regression always uses "mse" for tuning, while
+  #           classification uses "brier_class"
+  #           both of these are minimised,
+  #           for futility we test > null
+  test_metric <- ifelse(type == "regression", "mse", "brier_class")
+
+  null_perf <- nullmetrics(y) |>
+    filter(.data$.metric == test_metric) %>%
+    dplyr::pull(.data$.estimate)
+
+  cv_perf <- tuning |>
+    filter(.data$.metric == test_metric) |>
+    dplyr::pull(.data$mean) |>
+    min(na.rm = TRUE)
+
+  if ( cv_perf > null_perf ) {
+    cli::cli_alert_warning(
+      "cross-validation not run: tuning CV worse than null-model"
+    )
+    chk <- TRUE
   }
   chk
 }

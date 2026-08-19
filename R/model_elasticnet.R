@@ -40,6 +40,10 @@
 #'   which will be used to resample the data for tuning purposes
 #'   (e.g. ["bootstraps"][rsample::bootstraps], ["vfoldcv"][rsample::vfold_cv])
 #' @param tuning_resample_args list of arguments to pass to `tuning_resample_fxn`
+#' @param check_futility logical. Futility checks on the finalmodel
+#'     determine whether cross-validation should be conducted.
+#'     If `check_futility = FALSE` then cross-validation is
+#'     always conducted.
 #' @param ... unused.
 #'
 #' @seealso [glmnet::glmnet] [parsnip::linear_reg] [parsnip::logistic_reg]
@@ -87,6 +91,7 @@ elasticnet.regression_analysis <-  function(
   metricset = metricset_regression(),
   tuning_resample_fxn = "bootstraps",
   tuning_resample_args = list(times = 30L, strata = "y"),
+  check_futility = TRUE,
   ...
 ) {
   checkmate::assert_int(mixture_res, lower = 2L)
@@ -187,8 +192,11 @@ elasticnet.regression_analysis <-  function(
 
   # futility check - i.e. if the tuned model is
   #               intercept only then don't cross-validate.
-  FUTILITY <- futility_check_elasticnet(preds)
-
+  if ( check_futility ) {
+    FUTILITY <- futility_check_elasticnet(preds)
+  } else {
+    FUTILITY <- FALSE
+  }
   # ~ fold models -----------------------------------------------------------
   if ( !FUTILITY ) {
     lapply(seq.int(length(folds)), function(i) {
@@ -259,6 +267,7 @@ elasticnet.classification_analysis <-  function(
   metricset = metricset_classification(),
   tuning_resample_fxn = "bootstraps",
   tuning_resample_args = list(times = 30L, strata = "y"),
+  check_futility = TRUE,
   ...
 ) {
   checkmate::assert_int(mixture_res, lower = 2L)
@@ -365,7 +374,11 @@ elasticnet.classification_analysis <-  function(
 
   # futility check - i.e. if the tuned model is
   #               intercept only then don't cross-validate.
-  FUTILITY <- futility_check_elasticnet(preds)
+  if ( check_futility ) {
+    FUTILITY <- futility_check_elasticnet(preds)
+  } else {
+    FUTILITY <- FALSE
+  }
 
   # ~ fold models -----------------------------------------------------------
   if ( !FUTILITY ) {
