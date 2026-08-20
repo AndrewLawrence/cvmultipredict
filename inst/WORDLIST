@@ -5,11 +5,11 @@ finalmodel
 glmnet
 glmnet's
 json
-ntrees
 nullmetrics
 params
 pca
 resultpath
+rf
 rsample
 rset
 tibble
