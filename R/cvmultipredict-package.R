@@ -19,3 +19,21 @@
 #' @docType package
 #' @name cvmultipredict-package
 "_PACKAGE"
+
+#' @keywords internal
+check_suggested <- function(pkg, feature = NULL) {
+  if (requireNamespace(pkg, quietly = TRUE)) {
+    return(invisible(TRUE))
+  }
+
+  feature <- feature %||% "This functionality"
+
+  cli::cli_abort(
+    c(
+      "{.pkg {pkg}} is not installed.",
+      "x" = "{feature} requires {.pkg {pkg}}.",
+      "i" = "Install it with install.packages('{pkg}')."
+    ),
+    call = NULL
+  )
+}

@@ -17,9 +17,9 @@
 #'  * `.estimate`: metric value (for CV averaged over resamples)
 #'  * `.std_err`: SD of the metric value (`NA` for apparent performance)
 #'
-#' @importFrom tidyr nest
 #' @export
 pool_results <- function(x, na.rm = FALSE) {
+  check_suggested("tidyr", "Results Pooling")
   if (!inherits(x, "data.frame")) {
     x <- bind_rows(x, .id = "model")
   }
@@ -48,6 +48,7 @@ pool_results <- function(x, na.rm = FALSE) {
 #'
 #' @export
 plot_pooled_results <- function(x) {
+  check_suggested("ggplot2", "Plotting")
   p <- x |>
     ggplot2::ggplot(ggplot2::aes(y = .data$.estimate,
                                  x = .data$cvtype,
@@ -74,9 +75,10 @@ plot_pooled_results <- function(x) {
 #'     SD is calculated over the tuning CV resamples.
 #'
 #' @return A [ggplot object][ggplot2::ggplot]
-#' @importFrom tidyr pivot_longer
 #' @export
 plot_tuning_results <- function(x, se = FALSE) {
+  check_suggested("tidyr", "Plotting")
+  check_suggested("ggplot2", "Plotting")
   checkmate::assert_data_frame(x, col.names = "named")
   checkmate::assert_subset(c(".metric", "mean"), colnames(x))
   checkmate::assert_flag(se)

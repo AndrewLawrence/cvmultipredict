@@ -55,6 +55,7 @@ elasticnet <- function(x,
                        penalty_minratio = "auto",
                        mixture_min = log(0.05),
                        ...) {
+  check_suggested("glmnet", "Elastic-net fitting")
   UseMethod("elasticnet")
 }
 
@@ -447,13 +448,13 @@ assert_auto_or_ratio <- function(x) {
   )
 }
 
-#' @importFrom glmnet glmnet
 #' @keywords internal
 elasticnet_lambda_calculator <- function(y,
                                          x,
                                          alpha,
                                          nlambda,
                                          minratio) {
+  check_suggested("glmnet", "Elastic-net fitting")
   glmnet::glmnet(y = as.vector(y),
                  x = as.matrix(x),
                  alpha = alpha,
