@@ -84,7 +84,7 @@ plot_tuning_results <- function(x, se = FALSE) {
   checkmate::assert_flag(se)
 
   idx <- which(colnames(x) == ".metric") - 1
-  if (idx == 1L) {
+  if (idx == 0L) {
     cli::cli_abort("problem with dataset names")
   }
   # log transform certain hyperparameters
