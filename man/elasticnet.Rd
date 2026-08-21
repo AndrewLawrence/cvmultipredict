@@ -14,6 +14,9 @@ elasticnet(
   mixture_res = 3L,
   penalty_minratio = "auto",
   mixture_min = log(0.05),
+  tuning_resample_fxn = "vfold_cv",
+  tuning_resample_args = list(v = 10, repeats = 1, strata = "y"),
+  check_futility = TRUE,
   ...
 )
 
@@ -24,6 +27,9 @@ elasticnet(
   mixture_res = 3L,
   penalty_minratio = "auto",
   mixture_min = log(0.05),
+  tuning_resample_fxn = "vfold_cv",
+  tuning_resample_args = list(v = 10, repeats = 1, strata = "y"),
+  check_futility = TRUE,
   ...
 )
 
@@ -34,10 +40,10 @@ elasticnet(
   mixture_res = 3L,
   penalty_minratio = "auto",
   mixture_min = 0.05,
-  metricset = metricset_regression(),
-  tuning_resample_fxn = "bootstraps",
-  tuning_resample_args = list(times = 30L, strata = "y"),
+  tuning_resample_fxn = "vfold_cv",
+  tuning_resample_args = list(v = 10, repeats = 1, strata = "y"),
   check_futility = TRUE,
+  metricset = metricset_regression(),
   ...
 )
 
@@ -48,10 +54,10 @@ elasticnet(
   mixture_res = 3L,
   penalty_minratio = "auto",
   mixture_min = 0.05,
-  metricset = metricset_classification(),
-  tuning_resample_fxn = "bootstraps",
-  tuning_resample_args = list(times = 30L, strata = "y"),
+  tuning_resample_fxn = "vfold_cv",
+  tuning_resample_args = list(v = 10, repeats = 1, strata = "y"),
   check_futility = TRUE,
+  metricset = metricset_classification(),
   ...
 )
 }
@@ -75,10 +81,6 @@ the model should get to a pure L2 (Ridge) model. For p >> n the pure ridge
 is very time-consuming, so the default is 0.05.
 Set this to 0.0 to consider the time-consuming pure L2 Ridge when tuning.}
 
-\item{...}{unused.}
-
-\item{metricset}{used internally to specify metrics}
-
 \item{tuning_resample_fxn}{a string containing a function name from \link[rsample:rsample]{rsample}
 which will be used to resample the data for tuning purposes
 (e.g. \link[rsample:bootstraps]{"bootstraps"}, \link[rsample:vfold_cv]{"vfoldcv"})}
@@ -89,6 +91,10 @@ which will be used to resample the data for tuning purposes
 determine whether cross-validation should be conducted.
 If \code{check_futility = FALSE} then cross-validation is
 always conducted.}
+
+\item{...}{unused.}
+
+\item{metricset}{used internally to specify metrics}
 }
 \description{
 Fits to data a model linear in the predictors but with regularisation to

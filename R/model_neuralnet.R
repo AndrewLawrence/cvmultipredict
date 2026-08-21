@@ -32,6 +32,11 @@ neuralnet <- function(x,
                       tunerange_learn_rate = c(-10, -1),
                       tuning_bayes_maxit = 50L,
                       tuning_bayes_minit = 10L,
+                      tuning_resample_fxn = "vfold_cv",
+                      tuning_resample_args = list(v = 10,
+                                                  repeats = 1,
+                                                  strata = "y"),
+                      check_futility = TRUE,
                       ...) {
   UseMethod("neuralnet")
 }
@@ -47,6 +52,11 @@ neuralnet.default <- function(x,
                               tunerange_learn_rate = c(-10, -1),
                               tuning_bayes_maxit = 50L,
                               tuning_bayes_minit = 10L,
+                              tuning_resample_fxn = "vfold_cv",
+                              tuning_resample_args = list(v = 10,
+                                                          repeats = 1,
+                                                          strata = "y"),
+                              check_futility = TRUE,
                               ...) {
   stop("Not implemented for classes apart from analysis")
 }
@@ -61,7 +71,6 @@ neuralnet.default <- function(x,
 #' @importFrom tune finalize_workflow select_best tune_grid
 #' @importFrom tune collect_metrics control_grid tune
 #' @importFrom dials epochs learn_rate grid_space_filling finalize
-#' @importFrom rsample bootstraps
 #' @export
 neuralnet.regression_analysis <-  function(
   x,
@@ -73,10 +82,10 @@ neuralnet.regression_analysis <-  function(
   tunerange_learn_rate = c(-10, -1),
   tuning_bayes_maxit = 50L,
   tuning_bayes_minit = 10L,
-  metricset = metricset_regression(),
   tuning_resample_fxn = "vfold_cv",
   tuning_resample_args = list(v = 10, repeats = 1, strata = "y"),
   check_futility = TRUE,
+  metricset = metricset_regression(),
   ...
 ) {
   check_suggested("kindling", "neural network models")
@@ -314,10 +323,10 @@ neuralnet.classification_analysis <-  function(
   tunerange_learn_rate = c(-10, -1),
   tuning_bayes_maxit = 50L,
   tuning_bayes_minit = 10L,
-  metricset = metricset_classification(),
   tuning_resample_fxn = "vfold_cv",
   tuning_resample_args = list(v = 10, repeats = 1, strata = "y"),
   check_futility = TRUE,
+  metricset = metricset_classification(),
   ...
 ) {
   check_suggested("kindling", "neural network models")

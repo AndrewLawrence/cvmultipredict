@@ -54,6 +54,11 @@ elasticnet <- function(x,
                        mixture_res = 3L,
                        penalty_minratio = "auto",
                        mixture_min = log(0.05),
+                       tuning_resample_fxn = "vfold_cv",
+                       tuning_resample_args = list(v = 10,
+                                                   repeats = 1,
+                                                   strata = "y"),
+                       check_futility = TRUE,
                        ...) {
   check_suggested("glmnet", "Elastic-net fitting")
   UseMethod("elasticnet")
@@ -67,6 +72,11 @@ elasticnet.default <- function(x,
                                mixture_res = 3L,
                                penalty_minratio = "auto",
                                mixture_min = log(0.05),
+                               tuning_resample_fxn = "vfold_cv",
+                               tuning_resample_args = list(v = 10,
+                                                           repeats = 1,
+                                                           strata = "y"),
+                               check_futility = TRUE,
                                ...) {
   stop("Not implemented for classes apart from analysis")
 }
@@ -80,7 +90,6 @@ elasticnet.default <- function(x,
 #' @importFrom rlang .data
 #' @importFrom tune finalize_workflow select_best tune_grid
 #' @importFrom tune collect_metrics control_grid tune
-#' @importFrom rsample bootstraps
 #' @export
 elasticnet.regression_analysis <-  function(
   x,
@@ -89,10 +98,10 @@ elasticnet.regression_analysis <-  function(
   mixture_res = 3L,
   penalty_minratio = "auto",
   mixture_min = 0.05,
-  metricset = metricset_regression(),
-  tuning_resample_fxn = "bootstraps",
-  tuning_resample_args = list(times = 30L, strata = "y"),
+  tuning_resample_fxn = "vfold_cv",
+  tuning_resample_args = list(v = 10, repeats = 1, strata = "y"),
   check_futility = TRUE,
+  metricset = metricset_regression(),
   ...
 ) {
   checkmate::assert_int(mixture_res, lower = 2L)
@@ -265,10 +274,10 @@ elasticnet.classification_analysis <-  function(
   mixture_res = 3L,
   penalty_minratio = "auto",
   mixture_min = 0.05,
-  metricset = metricset_classification(),
-  tuning_resample_fxn = "bootstraps",
-  tuning_resample_args = list(times = 30L, strata = "y"),
+  tuning_resample_fxn = "vfold_cv",
+  tuning_resample_args = list(v = 10, repeats = 1, strata = "y"),
   check_futility = TRUE,
+  metricset = metricset_classification(),
   ...
 ) {
   checkmate::assert_int(mixture_res, lower = 2L)

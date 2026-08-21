@@ -97,6 +97,11 @@ xgboost <- function(x,
                     tunerange_learn_rate = c(-5, 1.5),
                     tuning_bayes_maxit = 50L,
                     tuning_bayes_minit = 10L,
+                    tuning_resample_fxn = "vfold_cv",
+                    tuning_resample_args = list(v = 10,
+                                                repeats = 1,
+                                                strata = "y"),
+                    check_futility = TRUE,
                     ...) {
   UseMethod("xgboost")
 }
@@ -113,6 +118,11 @@ xgboost.default <- function(x,
                             tunerange_learn_rate = c(-5, 1.5),
                             tuning_bayes_maxit = 50L,
                             tuning_bayes_minit = 10L,
+                            tuning_resample_fxn = "vfold_cv",
+                            tuning_resample_args = list(v = 10,
+                                                        repeats = 1,
+                                                        strata = "y"),
+                            check_futility = TRUE,
                             ...) {
   stop("Not implemented for classes apart from analysis")
 }
@@ -128,7 +138,6 @@ xgboost.default <- function(x,
 #' @importFrom tune collect_metrics control_grid tune
 #' @importFrom dials min_n trees loss_reduction tree_depth
 #' @importFrom dials learn_rate grid_space_filling
-#' @importFrom rsample bootstraps
 #' @export
 xgboost.regression_analysis <-  function(
   x,
@@ -141,10 +150,10 @@ xgboost.regression_analysis <-  function(
   tunerange_learn_rate = c(-5, 1.5),
   tuning_bayes_maxit = 50L,
   tuning_bayes_minit = 10L,
-  metricset = metricset_regression(),
   tuning_resample_fxn = "vfold_cv",
   tuning_resample_args = list(v = 10, repeats = 1, strata = "y"),
   check_futility = TRUE,
+  metricset = metricset_regression(),
   ...
 ) {
   checkmate::assert_int(tuning_grid_n, lower = 0L)
@@ -395,10 +404,10 @@ xgboost.classification_analysis <-  function(
   tunerange_learn_rate = c(-5, 1.5),
   tuning_bayes_maxit = 50L,
   tuning_bayes_minit = 10L,
-  metricset = metricset_classification(),
   tuning_resample_fxn = "vfold_cv",
   tuning_resample_args = list(v = 10, repeats = 1, strata = "y"),
   check_futility = TRUE,
+  metricset = metricset_classification(),
   ...
 ) {
   checkmate::assert_int(tuning_grid_n, lower = 0L)

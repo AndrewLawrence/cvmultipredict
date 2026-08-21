@@ -17,6 +17,9 @@ neuralnet(
   tunerange_learn_rate = c(-10, -1),
   tuning_bayes_maxit = 50L,
   tuning_bayes_minit = 10L,
+  tuning_resample_fxn = "vfold_cv",
+  tuning_resample_args = list(v = 10, repeats = 1, strata = "y"),
+  check_futility = TRUE,
   ...
 )
 
@@ -30,6 +33,9 @@ neuralnet(
   tunerange_learn_rate = c(-10, -1),
   tuning_bayes_maxit = 50L,
   tuning_bayes_minit = 10L,
+  tuning_resample_fxn = "vfold_cv",
+  tuning_resample_args = list(v = 10, repeats = 1, strata = "y"),
+  check_futility = TRUE,
   ...
 )
 
@@ -43,10 +49,10 @@ neuralnet(
   tunerange_learn_rate = c(-10, -1),
   tuning_bayes_maxit = 50L,
   tuning_bayes_minit = 10L,
-  metricset = metricset_regression(),
   tuning_resample_fxn = "vfold_cv",
   tuning_resample_args = list(v = 10, repeats = 1, strata = "y"),
   check_futility = TRUE,
+  metricset = metricset_regression(),
   ...
 )
 
@@ -60,10 +66,10 @@ neuralnet(
   tunerange_learn_rate = c(-10, -1),
   tuning_bayes_maxit = 50L,
   tuning_bayes_minit = 10L,
-  metricset = metricset_classification(),
   tuning_resample_fxn = "vfold_cv",
   tuning_resample_args = list(v = 10, repeats = 1, strata = "y"),
   check_futility = TRUE,
+  metricset = metricset_classification(),
   ...
 )
 }
@@ -100,11 +106,6 @@ Default: 50L. Set to 0L to suppress bayesian optimisation.}
 Bayesian optimisation is terminated.
 Default: 10}
 
-\item{...}{unused.}
-
-\item{metricset}{used internally to specify the outer-loop evaluation metrics
-(not tuning)}
-
 \item{tuning_resample_fxn}{a string containing a function name from \link[rsample:rsample]{rsample}
 which will be used to resample the data for tuning purposes
 (e.g. \link[rsample:bootstraps]{"bootstraps"}, \link[rsample:vfold_cv]{"vfoldcv"})}
@@ -115,6 +116,11 @@ which will be used to resample the data for tuning purposes
 determine whether cross-validation should be conducted.
 If \code{check_futility = FALSE} then cross-validation is
 always conducted.}
+
+\item{...}{unused.}
+
+\item{metricset}{used internally to specify the outer-loop evaluation metrics
+(not tuning)}
 }
 \description{
 This is a neuralnetwork model 2-layer multilayer perceptron
