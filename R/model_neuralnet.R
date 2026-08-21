@@ -1,123 +1,57 @@
+# dev notes:
+#   a "neuralnet" will be an MLP with 2 hidden layers, bias parameters in
+#   each layer and tuning over:
+#     hidden_layers [h1, h2] (number of neurons in h1 and h2)
+#     epochs
+#     learn_rate
+#     n_selected (selection step using rf importance)
+#   as this is again 5 parameters we will use 3^5 = 243 space filling
+#     (i.e. entropy_max) hyperparameter combinations + bayesian optimisation
+#     as with xgboost.
 
-
-#' XGBoost model with grid-tuned hyperparameters followed by Bayesian optimisation
+#' This is a neuralnetwork model 2-layer multilayer perceptron
+#' @inheritParams xgboost
+#' @param tunevals_hidden_layers tuning values for hidden_layers.
+#'     default: 4,8,16,32,64.
+#'     *Used for h1 and h2 crossed. s.t. tuning includes h1 > h2 and h2 > h1.*
+#' @param tunevals_n_selected tuning values (discrete) for number of variables to
+#'     include (filtered by [rf importance][step_selectbyrfimp]).
+#' @param tunerange_epochs tuning range for [epochs][dials::epochs].
+#'     default: 10 : 1000
+#' @param tunerange_learn_rate tuning range for [learn_rate][dials::learn_rate].
+#'     default 1e-10 : 0.1
 #'
-#' Fits Extreme Gradient Boosting (XGBoost) models to the problem.
-#'  An XGBoost model is a non-linear ensemble of decision trees which are
-#'  built sequentially to improve upon the errors made in the previous trees.
-#'  Decision trees can automatically capture non-linear effects and higher order
-#'  interactions between features without requiring these be specified in
-#'  advance. Uses the [`xgboost`][xgboost::xgboost] engine with tuning wrapped by
-#'  [parsnip][parsnip::boost_tree].
-#'
-#' @section Hyperparameter Tuning:
-#' By default, tunes the following hyperparameters over a
-#'     [space filling grid][dials::grid_space_filling]
-#'     with number of entries set to resolution^dimensionality = 3^5 = 243.
-#'     Because this is a space-filling grid substantially more unique values
-#'     of each hyperparameter are tested than the resolution implies.
-#' * `ntrees` - number of trees in the ensemble
-#' * `tree_depth` - number of splits
-#' * `learn_rate` - (i.e. eta) step-size shrinkage used to prevent overfitting
-#' * `min_n` - threshold number of observations in a potential leaf node for
-#'    further partitioning to be considered. Larger == more conservative.
-#' * `loss_reduction` - threshold minimum reduction in the loss function required
-#'     to make a further partition on a leaf node. Larger == more conservative.
-#'
-#' After initial grid tuning, [Bayesian optimisation][tune::tune_bayes]
-#'     (Gaussian Process model) is applied to fine tune for 10-50 iterations.
-#'     This can be turned off by setting `tuning_bayes_maxit = 0L`.
-#'
-#' The following hyperparameters are fixed / untuned:
-#' * `mtry = 1.0` - do not randomly subsample features.
-#' * `sample_size = 1.0` - do not randomly subsample observations.
-#'
-#' All other values remain at the defaults of [xgboost::xgboost]
-#'     via [parsnip::xgb_train]
-#'
-#' Hyperparameter tuning is often vital to avoid overfitting and produce
-#'     good model performance. Motivated by this the default tuning scheme
-#'     is thorough and rather time-consuming to run.
-#'     While reducing the number of points in the space-filling grid
-#'     and/or removing bayesian optimisation can still produce good results,
-#'     it is safer to leverage knowledge about the problem to tailor
-#'     the tuning by fixing hyperparameters. This allows the density of
-#'     hyperparameter sampling to be maintained with a lower value of
-#'     `tuning_grid_n`.
-#'
-#' @note Hyperparameter ranges are length 2 or length 1 vectors. Use length 1
-#'     vectors to suppress tuning for that hyperparameter.
-#'     If a length 1 vector with value NA is provided then the
-#'     underlying default will be used (passing null)
-#'     Length 2 vectors are assumed to specify a range of hyperparameter
-#'     values to explore.
-#'
-#' @param x an analysis object to run models for.
-#' @param folder a folder path ending in a model-name unique label
-#'   used to store results.
-#' @param tuning_grid_n size of initial [space-filling][dials::grid_space_filling]
-#'    tuning grid. Default: 3^5 = 243.
-#'    Recommendation: base_spacing ^ dimensionality -
-#'    i.e. same number of elements as a hypercube with a (relatively)
-#'    low spacing resolution in each dimension. Due to the space_filling grid the
-#'    effective spacing within dimension is much greater than the base spacing.
-#' @param tunerange_min_n tuning range for min_n. default = c(2L, 10L).
-#' @param tunerange_trees tuning range for trees. default = c(1L, 2000L).
-#' @param tunerange_loss_reduction tuning range for loss_reduction.
-#'     default = c(-3L, 2L). log10 scale.
-#' @param tunerange_tree_depth tuning range for tree_depth. default = c(2L, 10L)
-#' @param tunerange_learn_rate tuning range for learn_rate. default = c(-5, 1.5).
-#'     log10 scale.
-#' @param tuning_bayes_maxit maximum number of Bayesian optimisation iterations.
-#'     Default: 50L. Set to 0L to suppress bayesian optimisation.
-#' @param tuning_bayes_minit number of iterations without improvement before
-#'     Bayesian optimisation is terminated.
-#'     Default: 10
-#' @param metricset used internally to specify the outer-loop evaluation metrics
-#'     (not tuning)
-#' @param tuning_resample_fxn a string containing a function name from [rsample]
-#'   which will be used to resample the data for tuning purposes
-#'   (e.g. ["bootstraps"][rsample::bootstraps], ["vfoldcv"][rsample::vfold_cv])
-#' @param tuning_resample_args list of arguments to pass to `tuning_resample_fxn`
-#' @param check_futility logical. Futility checks on the finalmodel
-#'     determine whether cross-validation should be conducted.
-#'     If `check_futility = FALSE` then cross-validation is
-#'     always conducted.
-#' @param ... unused.
-#'
-#' @seealso [xgboost::xgboost] [parsnip::boost_tree]
+#' @rdname neuralnet
 #' @export
-xgboost <- function(x,
-                    folder,
-                    tuning_grid_n = 243,
-                    tunerange_min_n = c(2L, 10L),
-                    tunerange_trees = c(1L, 2000L),
-                    tunerange_loss_reduction = c(-3L, 2L),
-                    tunerange_tree_depth = c(2L, 10L),
-                    tunerange_learn_rate = c(-5, 1.5),
-                    tuning_bayes_maxit = 50L,
-                    tuning_bayes_minit = 10L,
-                    ...) {
-  UseMethod("xgboost")
+neuralnet <- function(x,
+                      folder,
+                      tuning_grid_n = 243,
+                      tunevals_hidden_layers = 2^(2:6),
+                      tunevals_n_selected = seq(4, 12, by = 2),
+                      tunerange_epochs = c(10L, 1000L),
+                      tunerange_learn_rate = c(-10, -1),
+                      tuning_bayes_maxit = 50L,
+                      tuning_bayes_minit = 10L,
+                      ...) {
+  UseMethod("neuralnet")
 }
 
-#' @rdname xgboost
+#' @rdname neuralnet
 #' @export
-xgboost.default <- function(x,
-                            folder,
-                            tuning_grid_n = 243,
-                            tunerange_min_n = c(2L, 10L),
-                            tunerange_trees = c(1L, 2000L),
-                            tunerange_loss_reduction = c(-3L, 2L),
-                            tunerange_tree_depth = c(2L, 10L),
-                            tunerange_learn_rate = c(-5, 1.5),
-                            tuning_bayes_maxit = 50L,
-                            tuning_bayes_minit = 10L,
-                            ...) {
+neuralnet.default <- function(x,
+                              folder,
+                              tuning_grid_n = 243,
+                              tunevals_hidden_layers = 2^(2:6),
+                              tunevals_n_selected = seq(4, 12, by = 2),
+                              tunerange_epochs = c(10L, 1000L),
+                              tunerange_learn_rate = c(-10, -1),
+                              tuning_bayes_maxit = 50L,
+                              tuning_bayes_minit = 10L,
+                              ...) {
   stop("Not implemented for classes apart from analysis")
 }
 
-#' @rdname xgboost
+#' @rdname neuralnet
 #' @importFrom stats complete.cases predict update
 #' @importFrom workflows workflow add_recipe add_model
 #' @importFrom recipes recipe add_step all_predictors step_pca
@@ -126,19 +60,17 @@ xgboost.default <- function(x,
 #' @importFrom rlang .data
 #' @importFrom tune finalize_workflow select_best tune_grid
 #' @importFrom tune collect_metrics control_grid tune
-#' @importFrom dials min_n trees loss_reduction tree_depth
-#' @importFrom dials learn_rate grid_space_filling
+#' @importFrom dials epochs learn_rate grid_space_filling finalize
 #' @importFrom rsample bootstraps
 #' @export
-xgboost.regression_analysis <-  function(
+neuralnet.regression_analysis <-  function(
   x,
   folder,
   tuning_grid_n = 243,
-  tunerange_min_n = c(2L, 10L),
-  tunerange_trees = c(1L, 2000L),
-  tunerange_loss_reduction = c(-3L, 2L),
-  tunerange_tree_depth = c(2L, 10L),
-  tunerange_learn_rate = c(-5, 1.5),
+  tunevals_hidden_layers = 2^(2:6),
+  tunevals_n_selected = seq(4, 12, by = 2),
+  tunerange_epochs = c(10L, 1000L),
+  tunerange_learn_rate = c(-10, -1),
   tuning_bayes_maxit = 50L,
   tuning_bayes_minit = 10L,
   metricset = metricset_regression(),
@@ -147,32 +79,29 @@ xgboost.regression_analysis <-  function(
   check_futility = TRUE,
   ...
 ) {
+  check_suggested("kindling", "neural network models")
   checkmate::assert_int(tuning_grid_n, lower = 0L)
   checkmate::assert_int(tuning_bayes_maxit, lower = 0L)
   checkmate::assert_int(tuning_bayes_minit, lower = 0L)
-  tunerange_trees <- unlist(tunerange_trees)
-  tunerange_tree_depth <- unlist(tunerange_tree_depth)
-  tunerange_min_n <- unlist(tunerange_min_n)
-  tunerange_loss_reduction <- unlist(tunerange_loss_reduction)
+  tunevals_hidden_layers <- unlist(tunevals_hidden_layers)
+  tunevals_n_selected <- unlist(tunevals_n_selected)
+  tunerange_epochs <- unlist(tunerange_epochs)
   tunerange_learn_rate <- unlist(tunerange_learn_rate)
-  checkmate::assert_integer(tunerange_min_n,
+  checkmate::assert_integer(tunerange_epochs,
                             min.len = 1L,
                             max.len = 2L,
                             lower = 1L)
-  checkmate::assert_integer(tunerange_trees,
-                            min.len = 1L,
-                            max.len = 2L,
-                            lower = 1L)
-  checkmate::assert_integer(tunerange_tree_depth,
-                            min.len = 1L,
-                            max.len = 2L,
-                            lower = 1L)
-  checkmate::assert_numeric(tunerange_loss_reduction,
-                            min.len = 1L,
-                            max.len = 2L)
   checkmate::assert_numeric(tunerange_learn_rate,
                             min.len = 1L,
                             max.len = 2L)
+  checkmate::assert_numeric(tunevals_hidden_layers,
+                            min.len = 1L)
+  checkmate::assert_true(
+    all(tunevals_hidden_layers == as.integer(tunevals_hidden_layers))
+  )
+  checkmate::assert_true(
+    all(tunevals_n_selected == as.integer(tunevals_n_selected))
+  )
 
   DO_BAYES <- TRUE
   if ( tuning_bayes_maxit == 0L ) {
@@ -198,51 +127,40 @@ xgboost.regression_analysis <-  function(
 
     wf <- workflows::workflow()
 
-    rp <- recipes::recipe(y ~ ., data = df)
+    rp <- recipes::recipe(y ~ ., data = df) |>
+      step_selectbyrfimp(all_predictors(),
+                         n_selected = tune_or_fix_discrete(tunevals_n_selected))
 
     model <- do.call(
-      parsnip::boost_tree,
+      kindling::mlp_kindling,
       list(
-        engine = "xgboost",
+        engine = "kindling",
         mode = "regression",
-        mtry = 1.0, # fix mtry to be all cols
-        trees = tune_or_fix_range(tunerange_trees),
-        tree_depth = tune_or_fix_range(tunerange_tree_depth),
-        learn_rate = tune_or_fix_range(tunerange_learn_rate),
-        min_n = tune_or_fix_range(tunerange_min_n),
-        loss_reduction = tune_or_fix_range(tunerange_loss_reduction)
+        optimizer = "adam",
+        activations = c("relu", "relu"),
+        hidden_neurons = tune_or_fix_discrete(tunevals_hidden_layers),
+        epochs = tune_or_fix_range(tunerange_epochs),
+        learn_rate = tune_or_fix_range(tunerange_learn_rate)
       )
     )
-
-    param_info <- parsnip::extract_parameter_set_dials(model)
-    if ( length(tunerange_trees) > 1L ) {
-      param_info <- update(param_info,
-                           trees = trees(range = tunerange_trees))
-    }
-    if ( length(tunerange_tree_depth) > 1L ) {
-      param_info <- update(param_info,
-                           tree_depth = tree_depth(range = tunerange_tree_depth))
-    }
-    if ( length(tunerange_learn_rate) > 1L ) {
-      param_info <- update(param_info,
-                           learn_rate = learn_rate(range = tunerange_learn_rate))
-    }
-    if ( length(tunerange_min_n) > 1L ) {
-      param_info <- update(param_info, min_n = min_n(range = tunerange_min_n))
-    }
-    if ( length(tunerange_loss_reduction) > 1L ) {
-      param_info <- update(
-        param_info,
-        loss_reduction = loss_reduction(range = tunerange_loss_reduction)
-      )
-    }
 
     wf <- wf |>
       workflows::add_recipe(rp) |>
       workflows::add_model(model)
 
+    param_info <- parameters(
+      kindling::hidden_neurons(disc_values = tunevals_hidden_layers),
+      dials::epochs(range = tunerange_epochs),
+      learn_rate(range = tunerange_learn_rate),
+      rf_n_selected(disc_values = tunevals_n_selected)
+    ) |>
+      finalize(x = df[, -1])
+
     # Initial tuning grid:
-    tuning_grid <- grid_space_filling(param_info, size = tuning_grid_n)
+    tuning_grid <- kindling::grid_depth(param_info,
+                                        n_hlayer = 2L,
+                                        type = "max_entropy",
+                                        size = tuning_grid_n)
 
     # separate control objects for grid and bayes:
     tune_ctrl <- tune::control_grid(event_level = "second", verbose = TRUE)
@@ -255,10 +173,10 @@ xgboost.regression_analysis <-  function(
 
   # ~ final model -----------------------------------------------------------
   if ( file.exists(fm_loc) ) {
-    cli::cli_alert_info("xgboost loading: final model")
+    cli::cli_alert_info("neuralnet loading: final model")
     load(fm_loc)
   } else {
-    cli::cli_alert_info("xgboost tuning: final model")
+    cli::cli_alert_info("neuralnet tuning: final model")
 
     # make a resampling object:
     resample_args <- append(list(data = df), tuning_resample_args)
@@ -288,7 +206,7 @@ xgboost.regression_analysis <-  function(
     tuning_results <- tune::collect_metrics(tuning)
 
     # fit the final model:
-    cli::cli_alert_info("xgboost running: final model")
+    cli::cli_alert_info("neuralnet running: final model")
     m <- fit(fwf, data = df)
 
     # log to disk:
@@ -302,10 +220,12 @@ xgboost.regression_analysis <-  function(
   # futility check - i.e. if the tuned model is
   #               intercept only then don't cross-validate.
   if ( check_futility ) {
-    FUTILITY <- futility_check_xgboost(x = preds,
-                                       y = df$y,
-                                       tuning = tuning_results,
-                                       type = "regression")
+    FUTILITY <- futility_check_neuralnet(
+      x = preds,
+      y = df$y,
+      tuning = tuning_results,
+      type = "regression"
+    )
   } else {
     FUTILITY <- FALSE
   }
@@ -318,12 +238,12 @@ xgboost.regression_analysis <-  function(
       flab <- names(folds)[[i]]
       if ( file.exists(fname) ) {
 
-        msg_cv_loading(model = "xgboost",
+        msg_cv_loading(model = "neuralnet",
                        id = i,
                        nid = length(folds))
         load(fname)
       } else {
-        msg_cv_running(model = "xgboost",
+        msg_cv_running(model = "neuralnet",
                        id = i,
                        nid = length(folds))
 
@@ -382,17 +302,16 @@ xgboost.regression_analysis <-  function(
   invisible(results)
 }
 
-#' @rdname xgboost
+#' @rdname neuralnet
 #' @export
-xgboost.classification_analysis <-  function(
+neuralnet.classification_analysis <-  function(
   x,
   folder,
   tuning_grid_n = 243,
-  tunerange_min_n = c(2L, 10L),
-  tunerange_trees = c(1L, 2000L),
-  tunerange_loss_reduction = c(-3L, 2L),
-  tunerange_tree_depth = c(2L, 10L),
-  tunerange_learn_rate = c(-5, 1.5),
+  tunevals_hidden_layers = 2^(2:6),
+  tunevals_n_selected = seq(4, 12, by = 2),
+  tunerange_epochs = c(10L, 1000L),
+  tunerange_learn_rate = c(-10, -1),
   tuning_bayes_maxit = 50L,
   tuning_bayes_minit = 10L,
   metricset = metricset_classification(),
@@ -401,32 +320,29 @@ xgboost.classification_analysis <-  function(
   check_futility = TRUE,
   ...
 ) {
+  check_suggested("kindling", "neural network models")
   checkmate::assert_int(tuning_grid_n, lower = 0L)
   checkmate::assert_int(tuning_bayes_maxit, lower = 0L)
   checkmate::assert_int(tuning_bayes_minit, lower = 0L)
-  tunerange_trees <- unlist(tunerange_trees)
-  tunerange_tree_depth <- unlist(tunerange_tree_depth)
-  tunerange_min_n <- unlist(tunerange_min_n)
-  tunerange_loss_reduction <- unlist(tunerange_loss_reduction)
+  tunevals_hidden_layers <- unlist(tunevals_hidden_layers)
+  tunevals_n_selected <- unlist(tunevals_n_selected)
+  tunerange_epochs <- unlist(tunerange_epochs)
   tunerange_learn_rate <- unlist(tunerange_learn_rate)
-  checkmate::assert_integer(tunerange_min_n,
+  checkmate::assert_integer(tunerange_epochs,
                             min.len = 1L,
                             max.len = 2L,
                             lower = 1L)
-  checkmate::assert_integer(tunerange_trees,
-                            min.len = 1L,
-                            max.len = 2L,
-                            lower = 1L)
-  checkmate::assert_integer(tunerange_tree_depth,
-                            min.len = 1L,
-                            max.len = 2L,
-                            lower = 1L)
-  checkmate::assert_numeric(tunerange_loss_reduction,
-                            min.len = 1L,
-                            max.len = 2L)
   checkmate::assert_numeric(tunerange_learn_rate,
                             min.len = 1L,
                             max.len = 2L)
+  checkmate::assert_numeric(tunevals_hidden_layers,
+                            min.len = 1L)
+  checkmate::assert_true(
+    all(tunevals_hidden_layers == as.integer(tunevals_hidden_layers))
+  )
+  checkmate::assert_true(
+    all(tunevals_n_selected == as.integer(tunevals_n_selected))
+  )
 
   DO_BAYES <- TRUE
   if ( tuning_bayes_maxit == 0L ) {
@@ -452,52 +368,40 @@ xgboost.classification_analysis <-  function(
 
     wf <- workflows::workflow()
 
-    rp <- recipes::recipe(y ~ ., data = df)
+    rp <- recipes::recipe(y ~ ., data = df) |>
+      step_selectbyrfimp(all_predictors(),
+                         n_selected = tune_or_fix_discrete(tunevals_n_selected))
 
     model <- do.call(
-      parsnip::boost_tree,
+      kindling::mlp_kindling,
       list(
-        engine = "xgboost",
+        engine = "kindling",
         mode = "classification",
-        mtry = 1.0, # fix mtry to be all cols
-        trees = tune_or_fix_range(tunerange_trees),
-        tree_depth = tune_or_fix_range(tunerange_tree_depth),
-        learn_rate = tune_or_fix_range(tunerange_learn_rate),
-        min_n = tune_or_fix_range(tunerange_min_n),
-        loss_reduction = tune_or_fix_range(tunerange_loss_reduction)
+        optimizer = "adam",
+        activations = c("relu", "relu"),
+        hidden_neurons = tune_or_fix_discrete(tunevals_hidden_layers),
+        epochs = tune_or_fix_range(tunerange_epochs),
+        learn_rate = tune_or_fix_range(tunerange_learn_rate)
       )
     )
-
-    param_info <- parsnip::extract_parameter_set_dials(model)
-    if ( length(tunerange_trees) > 1L ) {
-      param_info <- update(param_info,
-                           trees = trees(range = tunerange_trees))
-    }
-    if ( length(tunerange_tree_depth) > 1L ) {
-      param_info <- update(param_info,
-                           tree_depth = tree_depth(range = tunerange_tree_depth))
-    }
-    if ( length(tunerange_learn_rate) > 1L ) {
-      param_info <- update(param_info,
-                           learn_rate = learn_rate(range = tunerange_learn_rate))
-    }
-    if ( length(tunerange_min_n) > 1L ) {
-      param_info <- update(param_info,
-                           min_n = min_n(range = tunerange_min_n))
-    }
-    if ( length(tunerange_loss_reduction) > 1L ) {
-      param_info <- update(
-        param_info,
-        loss_reduction = loss_reduction(range = tunerange_loss_reduction)
-      )
-    }
 
     wf <- wf |>
       workflows::add_recipe(rp) |>
       workflows::add_model(model)
 
+    param_info <- parameters(
+      kindling::hidden_neurons(disc_values = tunevals_hidden_layers),
+      dials::epochs(range = tunerange_epochs),
+      learn_rate(range = tunerange_learn_rate),
+      rf_n_selected(disc_values = tunevals_n_selected)
+    ) |>
+      finalize(x = df[, -1])
+
     # Initial tuning grid:
-    tuning_grid <- grid_space_filling(param_info, size = tuning_grid_n)
+    tuning_grid <- kindling::grid_depth(param_info,
+                                        n_hlayer = 2L,
+                                        type = "max_entropy",
+                                        size = tuning_grid_n)
 
     # separate control objects for grid and bayes:
     tune_ctrl <- tune::control_grid(event_level = "second", verbose = TRUE)
@@ -510,10 +414,10 @@ xgboost.classification_analysis <-  function(
 
   # ~ final model -----------------------------------------------------------
   if ( file.exists(fm_loc) ) {
-    cli::cli_alert_info("xgboost loading: final model")
+    cli::cli_alert_info("neuralnet loading: final model")
     load(fm_loc)
   } else {
-    cli::cli_alert_info("xgboost tuning: final model")
+    cli::cli_alert_info("neuralnet tuning: final model")
 
     # make a resampling object:
     resample_args <- append(list(data = df), tuning_resample_args)
@@ -538,13 +442,14 @@ xgboost.classification_analysis <-  function(
     # fix workflow:
     fwf <- tune::finalize_workflow(
       wf,
-      parameters = tune::select_best(tuning, metric = "brier_class")
+      parameters = tune::select_best(tuning,
+                                     metric = "brier_class")
     )
     # gather tuning results for analytics
     tuning_results <- tune::collect_metrics(tuning)
 
     # fit the final model:
-    cli::cli_alert_info("xgboost running: final model")
+    cli::cli_alert_info("neuralnet running: final model")
     m <- fit(fwf, data = df)
 
     # log to disk:
@@ -560,10 +465,10 @@ xgboost.classification_analysis <-  function(
   # futility check - i.e. if the tuned model is
   #               intercept only then don't cross-validate.
   if ( check_futility ) {
-    FUTILITY <- futility_check_xgboost(x = preds,
-                                       y = df$y,
-                                       tuning = tuning_results,
-                                       type = "classification")
+    FUTILITY <- futility_check_neuralnet(x = preds,
+                                         y = df$y,
+                                         tuning = tuning_results,
+                                         type = "classification")
   } else {
     FUTILITY <- FALSE
   }
@@ -576,12 +481,12 @@ xgboost.classification_analysis <-  function(
       flab <- names(folds)[[i]]
       if ( file.exists(fname) ) {
 
-        msg_cv_loading(model = "xgboost",
+        msg_cv_loading(model = "neuralnet",
                        id = i,
                        nid = length(folds))
         load(fname)
       } else {
-        msg_cv_running(model = "xgboost",
+        msg_cv_running(model = "neuralnet",
                        id = i,
                        nid = length(folds))
 
@@ -596,6 +501,7 @@ xgboost.classification_analysis <-  function(
                                     grid = tuning_grid,
                                     metrics = metric_set(brier_class),
                                     control = tune_ctrl)
+
         # Bayesian fine-tuning:
         if ( DO_BAYES ) {
           f_tuning <- tune::tune_bayes(wf,
@@ -644,7 +550,7 @@ xgboost.classification_analysis <-  function(
 #' @importFrom dplyr pull filter
 #' @importFrom stats var
 #' @keywords internal
-futility_check_xgboost <- function(
+futility_check_neuralnet <- function(
   x,
   y,
   tuning,
@@ -668,7 +574,7 @@ futility_check_xgboost <- function(
   #   predictions will be constant, so one futility check is for zero
   #   variance.
   #
-  # For xgboost it's very unlikely to produce zero variance predictions.
+  # For neuralnet it's very unlikely to produce zero variance predictions.
   #   A better check for xgb is if the holdout error from the finalmodel
   #   tuning_grid is not better than the "null" error of an intercept-only
   #   model.

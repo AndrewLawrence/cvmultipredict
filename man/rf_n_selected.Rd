@@ -4,12 +4,24 @@
 \alias{rf_n_selected}
 \title{rf_n_selected}
 \usage{
-rf_n_selected(range = c(1L, dials::unknown()), trans = NULL)
+rf_n_selected(
+  range = c(1L, dials::unknown()),
+  disc_values = NULL,
+  trans = NULL
+)
 }
 \arguments{
 \item{range}{A two-element vector holding the \emph{defaults} for the smallest and
 largest possible values, respectively. If a transformation is specified,
 these values should be in the \emph{transformed units}.}
+
+\item{disc_values}{\code{NULL} (default) or an integer vector of specific
+possible \code{disc_values} (e.g., \code{c(2L, 4L, 8L, 16L)}).
+When provided, tuning will be restricted to these discrete values.
+The range is automatically derived from these values if
+not explicitly given.
+The \code{trans} parameter would still be ignored by this parameter
+when supplied.}
 
 \item{trans}{A \code{trans} object from the \code{scales} package, such as
 \code{scales::transform_log10()} or \code{scales::transform_reciprocal()}. If not provided,

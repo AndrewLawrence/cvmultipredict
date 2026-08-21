@@ -166,22 +166,60 @@ tunable.step_selectbyrfimp <- function(x, ...) {
 #'    This parameter is integer. Upper bound should be determined by
 #'    the number of predictors in the model.
 #' @inheritParams dials::learn_rate range trans
+#' @param disc_values `NULL` (default) or an integer vector of specific
+#'     possible `disc_values` (e.g., `c(2L, 4L, 8L, 16L)`).
+#'     When provided, tuning will be restricted to these discrete values.
+#'     The range is automatically derived from these values if
+#'     not explicitly given.
+#'     The `trans` parameter would still be ignored by this parameter
+#'     when supplied.
 #' @importFrom dials unknown new_quant_param
 #' @export
 rf_n_selected <- function(range = c(1L, dials::unknown()),
+                          disc_values = NULL,
                           trans = NULL) {
 
-  dials::new_quant_param(
-    type = "integer",
-    range = range,
-    inclusive = c(TRUE, TRUE),
-    trans = trans,
-    label = c(
-      n_selected = "# Selected Predictors"
-    ),
-    finalize = get_rf_n_selected
-  )
+  param <- if (!is.null(disc_values)) {
+
+    disc_values <- unique(as.integer(disc_values))
+
+    if (
+      any(disc_values <= 0L) || anyNA(disc_values)
+    ) {
+      rlang::abort(
+        "`disc_values` must be positive integers with no missing values."
+      )
+    }
+
+    dials::new_quant_param(
+      type = "integer",
+      values = sort(disc_values),
+      inclusive = c(TRUE, TRUE),
+      trans = NULL,
+      label = c(
+        n_selected = "# Selected Predictors"
+      ),
+      finalize = NULL
+    )
+
+  } else {
+
+    dials::new_quant_param(
+      type = "integer",
+      range = range,
+      inclusive = c(TRUE, TRUE),
+      trans = trans,
+      label = c(
+        n_selected = "# Selected Predictors"
+      ),
+      finalize = get_rf_n_selected
+    )
+
+  }
+
+  param
 }
+
 
 #' @importFrom dials parameters
 #' @export

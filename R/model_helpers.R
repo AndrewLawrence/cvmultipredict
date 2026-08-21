@@ -97,3 +97,27 @@ msg_cv_loading <- function(model, id, nid) {
     "loading - model: {.val {model}}, CV {.int {id}} / {.int {nid}}"
   )
 }
+
+# used for ranges.
+#' @keywords internal
+tune_or_fix_range <- function(x) {
+  if (length(x) == 2) {
+    tune()
+  } else if (is.na(x)) {
+    NULL
+  } else {
+    x
+  }
+}
+
+# used for discrete values:
+#' @keywords internal
+tune_or_fix_discrete <- function(x) {
+  if (length(x) > 1) {
+    tune()
+  } else if (is.na(x)) {
+    NULL
+  } else {
+    x
+  }
+}

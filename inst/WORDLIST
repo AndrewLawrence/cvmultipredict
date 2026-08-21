@@ -5,9 +5,11 @@ finalmodel
 glmnet
 glmnet's
 json
+neuralnetwork
 nullmetrics
 params
 pca
+perceptron
 resultpath
 rf
 rsample

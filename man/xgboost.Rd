@@ -72,7 +72,7 @@ xgboost(
 )
 }
 \arguments{
-\item{x}{an analysis object to run xgboost models for.}
+\item{x}{an analysis object to run models for.}
 
 \item{folder}{a folder path ending in a model-name unique label
 used to store results.}
