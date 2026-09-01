@@ -44,6 +44,8 @@
 #'     determine whether cross-validation should be conducted.
 #'     If `check_futility = FALSE` then cross-validation is
 #'     always conducted.
+#' @param .RUN used internally to allow results collation without running
+#'     missing models.
 #' @param ... unused.
 #'
 #' @seealso [glmnet::glmnet] [parsnip::linear_reg] [parsnip::logistic_reg]
@@ -59,6 +61,8 @@ elasticnet <- function(x,
                                                    repeats = 1,
                                                    strata = "y"),
                        check_futility = TRUE,
+                       metricset = NULL,
+                       .RUN = TRUE,
                        ...) {
   check_suggested("glmnet", "Elastic-net fitting")
   UseMethod("elasticnet")
@@ -77,6 +81,8 @@ elasticnet.default <- function(x,
                                                            repeats = 1,
                                                            strata = "y"),
                                check_futility = TRUE,
+                               metricset = NULL,
+                               .RUN = TRUE,
                                ...) {
   stop("Not implemented for classes apart from analysis")
 }
@@ -102,8 +108,10 @@ elasticnet.regression_analysis <-  function(
   tuning_resample_args = list(v = 10, repeats = 1, strata = "y"),
   check_futility = TRUE,
   metricset = metricset_regression(),
+  .RUN = TRUE,
   ...
 ) {
+  checkmate::assert_flag(.RUN)
   checkmate::assert_int(mixture_res, lower = 2L)
   checkmate::assert_int(penalty_res, lower = 2L)
   assert_auto_or_ratio(penalty_minratio)
@@ -173,27 +181,32 @@ elasticnet.regression_analysis <-  function(
     cli::cli_alert_info("elasticnet loading: final model")
     load(fm_loc)
   } else {
-    cli::cli_alert_info("elasticnet tuning: final model")
-    # make a resampling object:
-    resample_args <- append(list(data = df), tuning_resample_args)
-    rs <- do.call(get(tuning_resample_fxn, envir = asNamespace("rsample")),
-                  resample_args)
-    # run tuning:
-    tuning <- tune::tune_grid(wf,
-                              resamples = rs,
-                              grid = tuning_grid,
-                              metrics = metric_set(mse),
-                              control = tune_ctrl)
+    if ( .RUN ) {
+      cli::cli_alert_info("elasticnet tuning: final model")
+      # make a resampling object:
+      resample_args <- append(list(data = df), tuning_resample_args)
+      rs <- do.call(get(tuning_resample_fxn, envir = asNamespace("rsample")),
+                    resample_args)
+      # run tuning:
+      tuning <- tune::tune_grid(wf,
+                                resamples = rs,
+                                grid = tuning_grid,
+                                metrics = metric_set(mse),
+                                control = tune_ctrl)
 
-    fwf <- tune::finalize_workflow(wf,
-                                   parameters = tune::select_best(tuning,
-                                                                  metric = "mse"))
+      fwf <- tune::finalize_workflow(wf,
+                                     parameters = tune::select_best(tuning,
+                                                                    metric = "mse"))
 
-    tuning_results <- tune::collect_metrics(tuning)
+      tuning_results <- tune::collect_metrics(tuning)
 
-    cli::cli_alert_info("elasticnet running: final model")
-    m <- fit(fwf, data = df)
-    save(m, tuning_results, file = fm_loc)
+      cli::cli_alert_info("elasticnet running: final model")
+      m <- fit(fwf, data = df)
+      save(m, tuning_results, file = fm_loc)
+    } else {
+      # error:
+      msg_norun_mainmissing()
+    }
   }
   # extract predictions:
   preds <- predict(m, new_data = df, type = "numeric") |>
@@ -219,40 +232,44 @@ elasticnet.regression_analysis <-  function(
                        nid = length(folds))
         load(fname)
       } else {
-        msg_cv_running(model = "elasticnet",
-                       id = i,
-                       nid = length(folds))
+        if ( .RUN ) {
+          msg_cv_running(model = "elasticnet",
+                         id = i,
+                         nid = length(folds))
 
-        # make a resampling object:
-        f_resample_args <- append(list(data = df[fids, ]), tuning_resample_args)
+          # make a resampling object:
+          f_resample_args <- append(list(data = df[fids, ]), tuning_resample_args)
 
-        f_rs <- do.call(get(tuning_resample_fxn, envir = asNamespace("rsample")),
-                        f_resample_args)
-        # run tuning:
-        f_tuning <- tune::tune_grid(wf,
-                                    resamples = f_rs,
-                                    grid = tuning_grid,
-                                    metrics = metric_set(mse),
-                                    control = tune_ctrl)
+          f_rs <- do.call(get(tuning_resample_fxn, envir = asNamespace("rsample")),
+                          f_resample_args)
+          # run tuning:
+          f_tuning <- tune::tune_grid(wf,
+                                      resamples = f_rs,
+                                      grid = tuning_grid,
+                                      metrics = metric_set(mse),
+                                      control = tune_ctrl)
 
 
-        f_wf <- tune::finalize_workflow(
-          wf,
-          parameters = tune::select_best(f_tuning, metric = "mse")
-        )
+          f_wf <- tune::finalize_workflow(
+            wf,
+            parameters = tune::select_best(f_tuning, metric = "mse")
+          )
 
-        f_tuning_results <- tune::collect_metrics(f_tuning) #nolint
+          f_tuning_results <- tune::collect_metrics(f_tuning) #nolint
 
-        m <- fit(f_wf, data = df[fids, ])
-        save(m, file = fname)
-
+          m <- fit(f_wf, data = df[fids, ])
+          save(m, file = fname)
+        }
       }
-      preds <<- dplyr::bind_rows(
-        preds,
-        predict(m, new_data = df[-fids, ], type = "numeric") |>
-          bind_cols(y = df[-fids, "y"]) |>
-          bind_cols(label = flab)
-      )
+      if ( exists("m") ) {
+
+        preds <<- dplyr::bind_rows(
+          preds,
+          predict(m, new_data = df[-fids, ], type = "numeric") |>
+            bind_cols(y = df[-fids, "y"]) |>
+            bind_cols(label = flab)
+        )
+      }
     })
   }
   # ~ metrics ---------------------------------------------------------------
@@ -278,8 +295,10 @@ elasticnet.classification_analysis <-  function(
   tuning_resample_args = list(v = 10, repeats = 1, strata = "y"),
   check_futility = TRUE,
   metricset = metricset_classification(),
+  .RUN = TRUE,
   ...
 ) {
+  checkmate::assert_flag(.RUN)
   checkmate::assert_int(mixture_res, lower = 2L)
   checkmate::assert_int(penalty_res, lower = 2L)
   assert_auto_or_ratio(penalty_minratio)
@@ -349,30 +368,35 @@ elasticnet.classification_analysis <-  function(
     cli::cli_alert_info("elasticnet loading: final model")
     load(fm_loc)
   } else {
-    cli::cli_alert_info("elasticnet tuning: final model")
+    if ( .RUN ) {
+      cli::cli_alert_info("elasticnet tuning: final model")
 
-    # make a resampling object:
-    resample_args <- append(list(data = df), tuning_resample_args)
-    rs <- do.call(get(tuning_resample_fxn, envir = asNamespace("rsample")),
-                  resample_args)
-    # run tuning:
-    tuning <- tune::tune_grid(wf,
-                              resamples = rs,
-                              grid = tuning_grid,
-                              metrics = metric_set(brier_class),
-                              control = tune_ctrl)
+      # make a resampling object:
+      resample_args <- append(list(data = df), tuning_resample_args)
+      rs <- do.call(get(tuning_resample_fxn, envir = asNamespace("rsample")),
+                    resample_args)
+      # run tuning:
+      tuning <- tune::tune_grid(wf,
+                                resamples = rs,
+                                grid = tuning_grid,
+                                metrics = metric_set(brier_class),
+                                control = tune_ctrl)
 
-    fwf <- tune::finalize_workflow(
-      wf,
-      parameters = tune::select_best(tuning,
-                                     metric = "brier_class")
-    )
+      fwf <- tune::finalize_workflow(
+        wf,
+        parameters = tune::select_best(tuning,
+                                       metric = "brier_class")
+      )
 
-    tuning_results <- tune::collect_metrics(tuning)
+      tuning_results <- tune::collect_metrics(tuning)
 
-    cli::cli_alert_info("elasticnet running: final model")
-    m <- fit(fwf, data = df)
-    save(m, tuning_results, file = fm_loc)
+      cli::cli_alert_info("elasticnet running: final model")
+      m <- fit(fwf, data = df)
+      save(m, tuning_results, file = fm_loc)
+    } else {
+      # error:
+      msg_norun_mainmissing()
+    }
   }
 
   # extract predictions:
@@ -396,7 +420,7 @@ elasticnet.classification_analysis <-  function(
       fname <- fold_locs[[i]]
       fids <- folds[[i]]
       flab <- names(folds)[[i]]
-      if ( !file.exists(fname) ) {
+      if ( !file.exists(fname) && .RUN ) {
         msg_cv_running(model = "elasticnet",
                        id = i,
                        nid = length(folds))
@@ -428,14 +452,16 @@ elasticnet.classification_analysis <-  function(
                        nid = length(folds))
         load(fname)
       }
-      preds <<- dplyr::bind_rows(
-        preds,
-        predict(m, new_data = df[-fids, ], type = "prob") |>
-          dplyr::select(-1) |>
-          setNames(".pred") |>
-          bind_cols(y = df[-fids, "y"]) |>
-          bind_cols(label = flab)
-      )
+      if ( exists("m") ) {
+        preds <<- dplyr::bind_rows(
+          preds,
+          predict(m, new_data = df[-fids, ], type = "prob") |>
+            dplyr::select(-1) |>
+            setNames(".pred") |>
+            bind_cols(y = df[-fids, "y"]) |>
+            bind_cols(label = flab)
+        )
+      }
     })
   }
   # ~ metrics ---------------------------------------------------------------

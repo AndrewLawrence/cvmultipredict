@@ -3,13 +3,16 @@
 #'
 #' @param x an [analysis] object (which links a [problem] and a [manifest] to a
 #'    working directory)
+#' @param .RUN should missing models be calculated?
+#'     If FALSE then cvmultipredict will attempt to load pre-calculated
+#'     results from disk. At least the final model stage must have completed.
 #'
 #' @return A named list containing, for each model in the [manifest],
 #'     a data.frame of performance metrics.
 #'
 #' @seealso [problem] [manifest] [analysis] [pool_results]
 #' @export
-cvmultipredict <- function(x) {
+cvmultipredict <- function(x, .RUN = TRUE) {
   force(x)
   x <- validate_analysis(x)
 
@@ -28,7 +31,9 @@ cvmultipredict <- function(x) {
     run_ints,
     \(.x) {
       msg_model_start(mtab[["label"]][.x])
-      r <- eval(call_from_analysis(x, .x), envir = list(x = x))
+      cl <- call_from_analysis(x, .x)
+      cl[[".RUN"]] <- .RUN
+      r <- eval(cl, envir = list(x = x))
       msg_model_finish(mtab[["label"]][.x])
       r
     }

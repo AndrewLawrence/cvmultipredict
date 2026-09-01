@@ -21,6 +21,8 @@ xgboost(
   tuning_resample_fxn = "vfold_cv",
   tuning_resample_args = list(v = 10, repeats = 1, strata = "y"),
   check_futility = TRUE,
+  metricset = NULL,
+  .RUN = TRUE,
   ...
 )
 
@@ -38,6 +40,8 @@ xgboost(
   tuning_resample_fxn = "vfold_cv",
   tuning_resample_args = list(v = 10, repeats = 1, strata = "y"),
   check_futility = TRUE,
+  metricset = NULL,
+  .RUN = TRUE,
   ...
 )
 
@@ -56,6 +60,7 @@ xgboost(
   tuning_resample_args = list(v = 10, repeats = 1, strata = "y"),
   check_futility = TRUE,
   metricset = metricset_regression(),
+  .RUN = TRUE,
   ...
 )
 
@@ -74,6 +79,7 @@ xgboost(
   tuning_resample_args = list(v = 10, repeats = 1, strata = "y"),
   check_futility = TRUE,
   metricset = metricset_classification(),
+  .RUN = TRUE,
   ...
 )
 }
@@ -120,10 +126,13 @@ determine whether cross-validation should be conducted.
 If \code{check_futility = FALSE} then cross-validation is
 always conducted.}
 
-\item{...}{unused.}
-
 \item{metricset}{used internally to specify the outer-loop evaluation metrics
 (not tuning)}
+
+\item{.RUN}{used internally to allow results collation without running
+missing models.}
+
+\item{...}{unused.}
 }
 \description{
 Fits Extreme Gradient Boosting (XGBoost) models to the problem.

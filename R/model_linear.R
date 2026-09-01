@@ -18,6 +18,8 @@
 #'   or "auto" to use `floor((n - 50)/10)`.
 #' @param model used internally to specify a parsnip model
 #' @param metricset used internally to specify metrics
+#' @param .RUN used internally to allow results collation without running
+#'   missing models.
 #' @param ... unused.
 #'
 #' @seealso  [parsnip::linear_reg] [parsnip::logistic_reg]
@@ -26,6 +28,9 @@ linear <- function(x,
                    folder,
                    pca = "auto",
                    pca_ncomp = "auto",
+                   model = NULL,
+                   metricset = NULL,
+                   .RUN = TRUE,
                    ...) {
   UseMethod("linear")
 }
@@ -36,6 +41,9 @@ linear.default <- function(x,
                            folder,
                            pca = "auto",
                            pca_ncomp = "auto",
+                           model = NULL,
+                           metricset = NULL,
+                           .RUN = TRUE,
                            ...) {
   stop("Not implemented for classes apart from analysis")
 }
@@ -54,7 +62,9 @@ linear.regression_analysis <-  function(x,
                                         pca_ncomp = "auto",
                                         model = parsnip::linear_reg(),
                                         metricset = metricset_regression(),
+                                        .RUN = TRUE,
                                         ...) {
+  checkmate::assert_flag(.RUN)
   assert_auto_or_flag(pca)
   assert_auto_or_posint(pca_ncomp)
 
@@ -104,12 +114,17 @@ linear.regression_analysis <-  function(x,
   }
 
   # ~ final model -----------------------------------------------------------
-  if ( !file.exists(fm_loc) ) {
+  if ( !file.exists(fm_loc) && .RUN ) {
     cli::cli_alert_info("linear running: final model")
     m <- fit(wf, data = df)
     save(m, file = fm_loc)
   } else {
-    load(fm_loc)
+    if ( file.exists(fm_loc) ) {
+      load(fm_loc)
+    } else {
+      # error:
+      msg_norun_mainmissing()
+    }
   }
   # extract predictions:
   preds <- predict(m, new_data = df, type = "numeric") |>
@@ -121,7 +136,7 @@ linear.regression_analysis <-  function(x,
     fname <- fold_locs[[i]]
     fids <- folds[[i]]
     flab <- names(folds)[[i]]
-    if ( !file.exists(fname) ) {
+    if ( !file.exists(fname) && .RUN ) {
       msg_cv_running(model = "linear",
                      id = i,
                      nid = length(folds))
@@ -133,12 +148,14 @@ linear.regression_analysis <-  function(x,
                      nid = length(folds))
       load(fname)
     }
-    preds <<- dplyr::bind_rows(
-      preds,
-      predict(m, new_data = df[-fids, ], type = "numeric") |>
-        bind_cols(y = df[-fids, "y"]) |>
-        bind_cols(label = flab)
-    )
+    if ( exists("m") ) {
+      preds <<- dplyr::bind_rows(
+        preds,
+        predict(m, new_data = df[-fids, ], type = "numeric") |>
+          bind_cols(y = df[-fids, "y"]) |>
+          bind_cols(label = flab)
+      )
+    }
   })
 
   # ~ metrics ---------------------------------------------------------------
@@ -159,7 +176,9 @@ linear.classification_analysis <-  function(x,
                                             pca_ncomp = "auto",
                                             model = parsnip::logistic_reg(),
                                             metricset = metricset_classification(),
+                                            .RUN = TRUE,
                                             ...) {
+  checkmate::assert_flag(.RUN)
   assert_auto_or_flag(pca)
   assert_auto_or_posint(pca_ncomp)
 
@@ -209,12 +228,17 @@ linear.classification_analysis <-  function(x,
   }
 
   # ~ final model -----------------------------------------------------------
-  if ( !file.exists(fm_loc) ) {
+  if ( !file.exists(fm_loc) && .RUN ) {
     cli::cli_alert_info("linear running: final model")
     m <- fit(wf, data = df)
     save(m, file = fm_loc)
   } else {
-    load(fm_loc)
+    if ( file.exists(fm_loc) ) {
+      load(fm_loc)
+    } else {
+      # error:
+      msg_norun_mainmissing()
+    }
   }
   # extract predictions:
   preds <- predict(m, new_data = df, type = "prob") |>
@@ -223,12 +247,13 @@ linear.classification_analysis <-  function(x,
     bind_cols(y = df$y) |>
     bind_cols(label = "apparent")
 
+
   # ~ fold models -----------------------------------------------------------
   lapply(seq.int(length(folds)), function(i) {
     fname <- fold_locs[[i]]
     fids <- folds[[i]]
     flab <- names(folds)[[i]]
-    if ( !file.exists(fname) ) {
+    if ( !file.exists(fname) && .RUN ) {
       msg_cv_running(model = "linear",
                      id = i,
                      nid = length(folds))
@@ -240,14 +265,16 @@ linear.classification_analysis <-  function(x,
                      nid = length(folds))
       load(fname)
     }
-    preds <<- dplyr::bind_rows(
-      preds,
-      predict(m, new_data = df[-fids, ], type = "prob") |>
-        dplyr::select(-1) |>
-        setNames(".pred") |>
-        bind_cols(y = df[-fids, "y"]) |>
-        bind_cols(label = flab)
-    )
+    if ( exists("m") ) {
+      preds <<- dplyr::bind_rows(
+        preds,
+        predict(m, new_data = df[-fids, ], type = "prob") |>
+          dplyr::select(-1) |>
+          setNames(".pred") |>
+          bind_cols(y = df[-fids, "y"]) |>
+          bind_cols(label = flab)
+      )
+    }
   })
 
 

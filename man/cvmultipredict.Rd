@@ -4,11 +4,15 @@
 \alias{cvmultipredict}
 \title{Apply to an analysis to run models or collate results from disk}
 \usage{
-cvmultipredict(x)
+cvmultipredict(x, .RUN = TRUE)
 }
 \arguments{
 \item{x}{an \link{analysis} object (which links a \link{problem} and a \link{manifest} to a
 working directory)}
+
+\item{.RUN}{should missing models be calculated?
+If FALSE then cvmultipredict will attempt to load pre-calculated
+results from disk. At least the final model stage must have completed.}
 }
 \value{
 A named list containing, for each model in the \link{manifest},

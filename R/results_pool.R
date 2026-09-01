@@ -28,13 +28,13 @@ pool_results <- function(x, na.rm = FALSE) {
       ifelse(.data$label == "apparent", "app", "cv"),
       levels = c("app", "cv")
     )) |>
-    dplyr::select(-.data$label, -.data$.estimator) |>
-    tidyr::nest(.by = c(.data$model, .data$cvtype, .data$.metric)) |>
+    dplyr::select(-c("label", ".estimator")) |>
+    tidyr::nest(.by = c("model", "cvtype", ".metric")) |>
     dplyr::mutate(
       .estimate = purrr::map_dbl(.data$data, ~ mean(.x$.estimate, na.rm = na.rm)),
       .std_err = purrr::map_dbl(.data$data, ~ sd(.x$.estimate, na.rm = na.rm))
     ) |>
-    dplyr::select(-.data$data)
+    dplyr::select(-"data")
 }
 
 #' plot_pooled_results

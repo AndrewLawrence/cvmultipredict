@@ -7,9 +7,27 @@
 \alias{linear.classification_analysis}
 \title{A (general) linear model with minimal (untuned) regularisation.}
 \usage{
-linear(x, folder, pca = "auto", pca_ncomp = "auto", ...)
+linear(
+  x,
+  folder,
+  pca = "auto",
+  pca_ncomp = "auto",
+  model = NULL,
+  metricset = NULL,
+  .RUN = TRUE,
+  ...
+)
 
-\method{linear}{default}(x, folder, pca = "auto", pca_ncomp = "auto", ...)
+\method{linear}{default}(
+  x,
+  folder,
+  pca = "auto",
+  pca_ncomp = "auto",
+  model = NULL,
+  metricset = NULL,
+  .RUN = TRUE,
+  ...
+)
 
 \method{linear}{regression_analysis}(
   x,
@@ -18,6 +36,7 @@ linear(x, folder, pca = "auto", pca_ncomp = "auto", ...)
   pca_ncomp = "auto",
   model = parsnip::linear_reg(),
   metricset = metricset_regression(),
+  .RUN = TRUE,
   ...
 )
 
@@ -28,6 +47,7 @@ linear(x, folder, pca = "auto", pca_ncomp = "auto", ...)
   pca_ncomp = "auto",
   model = parsnip::logistic_reg(),
   metricset = metricset_classification(),
+  .RUN = TRUE,
   ...
 )
 }
@@ -44,11 +64,14 @@ such that auto applies a PCA step if n < (50 + 10p)}
 \item{pca_ncomp}{number of PCA components, either positive integer <= p
 or "auto" to use \code{floor((n - 50)/10)}.}
 
-\item{...}{unused.}
-
 \item{model}{used internally to specify a parsnip model}
 
 \item{metricset}{used internally to specify metrics}
+
+\item{.RUN}{used internally to allow results collation without running
+missing models.}
+
+\item{...}{unused.}
 }
 \description{
 Either no regularisation is applied, or an untuned PCA reduction of the

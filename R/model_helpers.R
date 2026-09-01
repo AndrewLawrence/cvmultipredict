@@ -98,6 +98,11 @@ msg_cv_loading <- function(model, id, nid) {
   )
 }
 
+#' @keywords internal
+msg_norun_mainmissing <- function() {
+  cli::cli_abort("Cannot collect results for analysis: final model is missing")
+}
+
 # used for ranges.
 #' @keywords internal
 tune_or_fix_range <- function(x) {

@@ -37,6 +37,8 @@ neuralnet <- function(x,
                                                   repeats = 1,
                                                   strata = "y"),
                       check_futility = TRUE,
+                      metricset = NULL,
+                      .RUN = TRUE,
                       ...) {
   UseMethod("neuralnet")
 }
@@ -57,6 +59,8 @@ neuralnet.default <- function(x,
                                                           repeats = 1,
                                                           strata = "y"),
                               check_futility = TRUE,
+                              metricset = NULL,
+                              .RUN = TRUE,
                               ...) {
   stop("Not implemented for classes apart from analysis")
 }
@@ -86,9 +90,11 @@ neuralnet.regression_analysis <-  function(
   tuning_resample_args = list(v = 10, repeats = 1, strata = "y"),
   check_futility = TRUE,
   metricset = metricset_regression(),
+  .RUN = TRUE,
   ...
 ) {
   check_suggested("kindling", "neural network models")
+  checkmate::assert_flag(.RUN)
   checkmate::assert_int(tuning_grid_n, lower = 0L)
   checkmate::assert_int(tuning_bayes_maxit, lower = 0L)
   checkmate::assert_int(tuning_bayes_minit, lower = 0L)
@@ -185,41 +191,46 @@ neuralnet.regression_analysis <-  function(
     cli::cli_alert_info("neuralnet loading: final model")
     load(fm_loc)
   } else {
-    cli::cli_alert_info("neuralnet tuning: final model")
+    if ( .RUN ) {
+      cli::cli_alert_info("neuralnet tuning: final model")
 
-    # make a resampling object:
-    resample_args <- append(list(data = df), tuning_resample_args)
-    rs <- do.call(get(tuning_resample_fxn, envir = asNamespace("rsample")),
-                  resample_args)
-    # run grid tuning:
-    tuning <- tune::tune_grid(wf,
-                              resamples = rs,
-                              grid = tuning_grid,
-                              metrics = metric_set(mse),
-                              control = tune_ctrl)
-    # Bayesian fine-tuning:
-    if ( DO_BAYES ) {
-      tuning <- tune::tune_bayes(wf,
-                                 resamples = rs,
-                                 initial = tuning,
-                                 iter = tuning_bayes_maxit,
-                                 param_info = param_info,
-                                 metrics = metric_set(mse),
-                                 control = tune_ctrl_bayes)
+      # make a resampling object:
+      resample_args <- append(list(data = df), tuning_resample_args)
+      rs <- do.call(get(tuning_resample_fxn, envir = asNamespace("rsample")),
+                    resample_args)
+      # run grid tuning:
+      tuning <- tune::tune_grid(wf,
+                                resamples = rs,
+                                grid = tuning_grid,
+                                metrics = metric_set(mse),
+                                control = tune_ctrl)
+      # Bayesian fine-tuning:
+      if ( DO_BAYES ) {
+        tuning <- tune::tune_bayes(wf,
+                                   resamples = rs,
+                                   initial = tuning,
+                                   iter = tuning_bayes_maxit,
+                                   param_info = param_info,
+                                   metrics = metric_set(mse),
+                                   control = tune_ctrl_bayes)
+      }
+      # fix workflow:
+      fwf <- tune::finalize_workflow(wf,
+                                     parameters = tune::select_best(tuning,
+                                                                    metric = "mse"))
+      # gather tuning results for analytics
+      tuning_results <- tune::collect_metrics(tuning)
+
+      # fit the final model:
+      cli::cli_alert_info("neuralnet running: final model")
+      m <- fit(fwf, data = df)
+
+      # log to disk:
+      save(m, tuning_results, file = fm_loc)
+    } else {
+      # error:
+      msg_norun_mainmissing()
     }
-    # fix workflow:
-    fwf <- tune::finalize_workflow(wf,
-                                   parameters = tune::select_best(tuning,
-                                                                  metric = "mse"))
-    # gather tuning results for analytics
-    tuning_results <- tune::collect_metrics(tuning)
-
-    # fit the final model:
-    cli::cli_alert_info("neuralnet running: final model")
-    m <- fit(fwf, data = df)
-
-    # log to disk:
-    save(m, tuning_results, file = fm_loc)
   }
   # extract predictions:
   preds <- predict(m, new_data = df, type = "numeric") |>
@@ -252,53 +263,56 @@ neuralnet.regression_analysis <-  function(
                        nid = length(folds))
         load(fname)
       } else {
-        msg_cv_running(model = "neuralnet",
-                       id = i,
-                       nid = length(folds))
+        if ( .RUN ) {
+          msg_cv_running(model = "neuralnet",
+                         id = i,
+                         nid = length(folds))
 
-        # make a resampling object:
-        f_resample_args <- append(list(data = df[fids, ]), tuning_resample_args)
+          # make a resampling object:
+          f_resample_args <- append(list(data = df[fids, ]), tuning_resample_args)
 
-        f_rs <- do.call(get(tuning_resample_fxn, envir = asNamespace("rsample")),
-                        f_resample_args)
-        # run grid tuning:
-        f_tuning <- tune::tune_grid(wf,
-                                    resamples = f_rs,
-                                    grid = tuning_grid,
-                                    metrics = metric_set(mse),
-                                    control = tune_ctrl)
+          f_rs <- do.call(get(tuning_resample_fxn, envir = asNamespace("rsample")),
+                          f_resample_args)
+          # run grid tuning:
+          f_tuning <- tune::tune_grid(wf,
+                                      resamples = f_rs,
+                                      grid = tuning_grid,
+                                      metrics = metric_set(mse),
+                                      control = tune_ctrl)
 
-        # Bayesian fine-tuning:
-        if ( DO_BAYES ) {
-          f_tuning <- tune::tune_bayes(wf,
-                                       resamples = f_rs,
-                                       initial = f_tuning,
-                                       iter = tuning_bayes_maxit,
-                                       param_info = param_info,
-                                       metrics = metric_set(mse),
-                                       control = tune_ctrl_bayes)
+          # Bayesian fine-tuning:
+          if ( DO_BAYES ) {
+            f_tuning <- tune::tune_bayes(wf,
+                                         resamples = f_rs,
+                                         initial = f_tuning,
+                                         iter = tuning_bayes_maxit,
+                                         param_info = param_info,
+                                         metrics = metric_set(mse),
+                                         control = tune_ctrl_bayes)
+          }
+          # fix workflow:
+          f_wf <- tune::finalize_workflow(
+            wf,
+            parameters = tune::select_best(f_tuning, metric = "mse")
+          )
+
+          # gather tuning results for analytics
+          f_tuning_results <- tune::collect_metrics(f_tuning)
+
+          # fit the final model:
+          m <- fit(f_wf, data = df[fids, ])
+          save(m, f_tuning_results, file = fname)
         }
-        # fix workflow:
-        f_wf <- tune::finalize_workflow(
-          wf,
-          parameters = tune::select_best(f_tuning, metric = "mse")
-        )
-
-        # gather tuning results for analytics
-        f_tuning_results <- tune::collect_metrics(f_tuning)
-
-        # fit the final model:
-        m <- fit(f_wf, data = df[fids, ])
-        save(m, f_tuning_results, file = fname)
-
       }
       # collate results:
-      preds <<- dplyr::bind_rows(
-        preds,
-        predict(m, new_data = df[-fids, ], type = "numeric") |>
-          bind_cols(y = df[-fids, "y"]) |>
-          bind_cols(label = flab)
-      )
+      if ( exists("m") ) {
+        preds <<- dplyr::bind_rows(
+          preds,
+          predict(m, new_data = df[-fids, ], type = "numeric") |>
+            bind_cols(y = df[-fids, "y"]) |>
+            bind_cols(label = flab)
+        )
+      }
     })
   }
   # ~ metrics ---------------------------------------------------------------
@@ -327,9 +341,11 @@ neuralnet.classification_analysis <-  function(
   tuning_resample_args = list(v = 10, repeats = 1, strata = "y"),
   check_futility = TRUE,
   metricset = metricset_classification(),
+  .RUN = TRUE,
   ...
 ) {
   check_suggested("kindling", "neural network models")
+  checkmate::assert_flag(.RUN)
   checkmate::assert_int(tuning_grid_n, lower = 0L)
   checkmate::assert_int(tuning_bayes_maxit, lower = 0L)
   checkmate::assert_int(tuning_bayes_minit, lower = 0L)
@@ -426,43 +442,48 @@ neuralnet.classification_analysis <-  function(
     cli::cli_alert_info("neuralnet loading: final model")
     load(fm_loc)
   } else {
-    cli::cli_alert_info("neuralnet tuning: final model")
+    if ( .RUN ) {
+      cli::cli_alert_info("neuralnet tuning: final model")
 
-    # make a resampling object:
-    resample_args <- append(list(data = df), tuning_resample_args)
-    rs <- do.call(get(tuning_resample_fxn, envir = asNamespace("rsample")),
-                  resample_args)
-    # run grid tuning:
-    tuning <- tune::tune_grid(wf,
-                              resamples = rs,
-                              grid = tuning_grid,
-                              metrics = metric_set(brier_class),
-                              control = tune_ctrl)
-    # Bayesian fine-tuning:
-    if ( DO_BAYES ) {
-      tuning <- tune::tune_bayes(wf,
-                                 resamples = rs,
-                                 initial = tuning,
-                                 iter = tuning_bayes_maxit,
-                                 param_info = param_info,
-                                 metrics = metric_set(brier_class),
-                                 control = tune_ctrl_bayes)
+      # make a resampling object:
+      resample_args <- append(list(data = df), tuning_resample_args)
+      rs <- do.call(get(tuning_resample_fxn, envir = asNamespace("rsample")),
+                    resample_args)
+      # run grid tuning:
+      tuning <- tune::tune_grid(wf,
+                                resamples = rs,
+                                grid = tuning_grid,
+                                metrics = metric_set(brier_class),
+                                control = tune_ctrl)
+      # Bayesian fine-tuning:
+      if ( DO_BAYES ) {
+        tuning <- tune::tune_bayes(wf,
+                                   resamples = rs,
+                                   initial = tuning,
+                                   iter = tuning_bayes_maxit,
+                                   param_info = param_info,
+                                   metrics = metric_set(brier_class),
+                                   control = tune_ctrl_bayes)
+      }
+      # fix workflow:
+      fwf <- tune::finalize_workflow(
+        wf,
+        parameters = tune::select_best(tuning,
+                                       metric = "brier_class")
+      )
+      # gather tuning results for analytics
+      tuning_results <- tune::collect_metrics(tuning)
+
+      # fit the final model:
+      cli::cli_alert_info("neuralnet running: final model")
+      m <- fit(fwf, data = df)
+
+      # log to disk:
+      save(m, tuning_results, file = fm_loc)
+    } else {
+      # error:
+      msg_norun_mainmissing()
     }
-    # fix workflow:
-    fwf <- tune::finalize_workflow(
-      wf,
-      parameters = tune::select_best(tuning,
-                                     metric = "brier_class")
-    )
-    # gather tuning results for analytics
-    tuning_results <- tune::collect_metrics(tuning)
-
-    # fit the final model:
-    cli::cli_alert_info("neuralnet running: final model")
-    m <- fit(fwf, data = df)
-
-    # log to disk:
-    save(m, tuning_results, file = fm_loc)
   }
   # extract predictions:
   preds <- predict(m, new_data = df, type = "prob") |>
@@ -495,55 +516,59 @@ neuralnet.classification_analysis <-  function(
                        nid = length(folds))
         load(fname)
       } else {
-        msg_cv_running(model = "neuralnet",
-                       id = i,
-                       nid = length(folds))
+        if ( .RUN ) {
 
-        # make a resampling object:
-        f_resample_args <- append(list(data = df[fids, ]), tuning_resample_args)
+          msg_cv_running(model = "neuralnet",
+                         id = i,
+                         nid = length(folds))
 
-        f_rs <- do.call(get(tuning_resample_fxn, envir = asNamespace("rsample")),
-                        f_resample_args)
-        # run grid tuning:
-        f_tuning <- tune::tune_grid(wf,
-                                    resamples = f_rs,
-                                    grid = tuning_grid,
-                                    metrics = metric_set(brier_class),
-                                    control = tune_ctrl)
+          # make a resampling object:
+          f_resample_args <- append(list(data = df[fids, ]), tuning_resample_args)
 
-        # Bayesian fine-tuning:
-        if ( DO_BAYES ) {
-          f_tuning <- tune::tune_bayes(wf,
-                                       resamples = f_rs,
-                                       initial = f_tuning,
-                                       iter = tuning_bayes_maxit,
-                                       param_info = param_info,
-                                       metrics = metric_set(brier_class),
-                                       control = tune_ctrl_bayes)
+          f_rs <- do.call(get(tuning_resample_fxn, envir = asNamespace("rsample")),
+                          f_resample_args)
+          # run grid tuning:
+          f_tuning <- tune::tune_grid(wf,
+                                      resamples = f_rs,
+                                      grid = tuning_grid,
+                                      metrics = metric_set(brier_class),
+                                      control = tune_ctrl)
+
+          # Bayesian fine-tuning:
+          if ( DO_BAYES ) {
+            f_tuning <- tune::tune_bayes(wf,
+                                         resamples = f_rs,
+                                         initial = f_tuning,
+                                         iter = tuning_bayes_maxit,
+                                         param_info = param_info,
+                                         metrics = metric_set(brier_class),
+                                         control = tune_ctrl_bayes)
+          }
+          # fix workflow:
+          f_wf <- tune::finalize_workflow(
+            wf,
+            parameters = tune::select_best(f_tuning, metric = "brier_class")
+          )
+
+          # gather tuning results for analytics
+          f_tuning_results <- tune::collect_metrics(f_tuning)
+
+          # fit the final model:
+          m <- fit(f_wf, data = df[fids, ])
+          save(m, f_tuning_results, file = fname)
         }
-        # fix workflow:
-        f_wf <- tune::finalize_workflow(
-          wf,
-          parameters = tune::select_best(f_tuning, metric = "brier_class")
-        )
-
-        # gather tuning results for analytics
-        f_tuning_results <- tune::collect_metrics(f_tuning)
-
-        # fit the final model:
-        m <- fit(f_wf, data = df[fids, ])
-        save(m, f_tuning_results, file = fname)
-
       }
       # collate results:
-      preds <<- dplyr::bind_rows(
-        preds,
-        predict(m, new_data = df[-fids, ], type = "prob") |>
-          dplyr::select(-1) |>
-          setNames(".pred") |>
-          bind_cols(y = df[-fids, "y"]) |>
-          bind_cols(label = flab)
-      )
+      if ( exists("m") ) {
+        preds <<- dplyr::bind_rows(
+          preds,
+          predict(m, new_data = df[-fids, ], type = "prob") |>
+            dplyr::select(-1) |>
+            setNames(".pred") |>
+            bind_cols(y = df[-fids, "y"]) |>
+            bind_cols(label = flab)
+        )
+      }
     })
   }
   # ~ metrics ---------------------------------------------------------------
