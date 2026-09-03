@@ -4,7 +4,14 @@
 \alias{plot_tuning_results}
 \title{plot_tuning_results}
 \usage{
-plot_tuning_results(x, se = FALSE)
+plot_tuning_results(
+  x,
+  se = FALSE,
+  highlight_bayes = TRUE,
+  highlight_best = TRUE,
+  alpha = 1,
+  best_function = function(x) min(x, na.rm = TRUE)
+)
 }
 \arguments{
 \item{x}{tuning results, either from \link[tune:tune_grid]{tune_grid},
@@ -14,6 +21,17 @@ or logged to disk by a \link{cvmultipredict} model.}
 \item flag: include error bars for +/- 1SD of performance?
 SD is calculated over the tuning CV resamples.
 }}
+
+\item{highlight_bayes}{a flag, if \code{TRUE} then bayesian optimisation
+steps get a colour scale.}
+
+\item{highlight_best}{a flag, if \code{TRUE} then the "best" hyperparameter
+combination is highlighted with a red circle.}
+
+\item{alpha}{transparency used for plotting.}
+
+\item{best_function}{a function applied to a numeric vector (including NAs)
+that returns the "best" value (usually min or max). Must ignore NA values.}
 }
 \value{
 A \link[ggplot2:ggplot]{ggplot object}
