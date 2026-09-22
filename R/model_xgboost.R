@@ -64,9 +64,9 @@
 #' @param tunerange_min_n tuning range for min_n. default = c(2L, 10L).
 #' @param tunerange_trees tuning range for trees. default = c(1L, 2000L).
 #' @param tunerange_loss_reduction tuning range for loss_reduction.
-#'     default = c(-3L, 2L). log10 scale.
+#'     default = c(-3L, 1L). log10 scale.
 #' @param tunerange_tree_depth tuning range for tree_depth. default = c(2L, 10L)
-#' @param tunerange_learn_rate tuning range for learn_rate. default = c(-5, 1.5).
+#' @param tunerange_learn_rate tuning range for learn_rate. default = c(-5L, -1L).
 #'     log10 scale.
 #' @param tuning_bayes_maxit maximum number of Bayesian optimisation iterations.
 #'     Default: 50L. Set to 0L to suppress bayesian optimisation.
@@ -94,9 +94,9 @@ xgboost <- function(x,
                     tuning_grid_n = 243,
                     tunerange_min_n = c(2L, 10L),
                     tunerange_trees = c(1L, 2000L),
-                    tunerange_loss_reduction = c(-3L, 2L),
+                    tunerange_loss_reduction = c(-3L, 1L),
                     tunerange_tree_depth = c(2L, 10L),
-                    tunerange_learn_rate = c(-5, 1.5),
+                    tunerange_learn_rate = c(-5L, -1L),
                     tuning_bayes_maxit = 50L,
                     tuning_bayes_minit = 10L,
                     tuning_resample_fxn = "vfold_cv",
@@ -117,9 +117,9 @@ xgboost.default <- function(x,
                             tuning_grid_n = 243,
                             tunerange_min_n = c(2L, 10L),
                             tunerange_trees = c(1L, 2000L),
-                            tunerange_loss_reduction = c(-3L, 2L),
+                            tunerange_loss_reduction = c(-3L, 1L),
                             tunerange_tree_depth = c(2L, 10L),
-                            tunerange_learn_rate = c(-5, 1.5),
+                            tunerange_learn_rate = c(-5L, -1L),
                             tuning_bayes_maxit = 50L,
                             tuning_bayes_minit = 10L,
                             tuning_resample_fxn = "vfold_cv",
@@ -151,9 +151,9 @@ xgboost.regression_analysis <-  function(
   tuning_grid_n = 243,
   tunerange_min_n = c(2L, 10L),
   tunerange_trees = c(1L, 2000L),
-  tunerange_loss_reduction = c(-3L, 2L),
+  tunerange_loss_reduction = c(-3L, 1L),
   tunerange_tree_depth = c(2L, 10L),
-  tunerange_learn_rate = c(-5, 1.5),
+  tunerange_learn_rate = c(-5L, -1L),
   tuning_bayes_maxit = 50L,
   tuning_bayes_minit = 10L,
   tuning_resample_fxn = "vfold_cv",
@@ -416,9 +416,9 @@ xgboost.classification_analysis <-  function(
   tuning_grid_n = 243,
   tunerange_min_n = c(2L, 10L),
   tunerange_trees = c(1L, 2000L),
-  tunerange_loss_reduction = c(-3L, 2L),
+  tunerange_loss_reduction = c(-3L, 1L),
   tunerange_tree_depth = c(2L, 10L),
-  tunerange_learn_rate = c(-5, 1.5),
+  tunerange_learn_rate = c(-5L, -1L),
   tuning_bayes_maxit = 50L,
   tuning_bayes_minit = 10L,
   tuning_resample_fxn = "vfold_cv",
