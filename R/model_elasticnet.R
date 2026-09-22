@@ -90,7 +90,8 @@ elasticnet.default <- function(x,
 #' @rdname elasticnet
 #' @importFrom stats complete.cases predict
 #' @importFrom workflows workflow add_recipe add_model
-#' @importFrom recipes recipe add_step all_predictors step_pca
+#' @importFrom recipes recipe add_step all_factor_predictors step_pca
+#' @importFrom recipes bake prep juice
 #' @importFrom parsnip linear_reg fit
 #' @importFrom dplyr bind_cols bind_rows
 #' @importFrom rlang .data
@@ -152,7 +153,8 @@ elasticnet.regression_analysis <-  function(
 
     wf <- workflows::workflow()
 
-    rp <- recipes::recipe(y ~ ., data = df)
+    rp <- recipes::recipe(y ~ ., data = df) |>
+      step_dummy(all_factor_predictors())
 
     model <- parsnip::linear_reg(mode = "regression",
                                  engine = "glmnet",
@@ -166,7 +168,7 @@ elasticnet.regression_analysis <-  function(
       workflows::add_model(model)
 
     tuning_grid <- elasticnet_make_grid(y = df$y,
-                                        x = df[, colnames(df) != "y"],
+                                        x = juice(prep(rp)),
                                         alpha_values = mixture_values,
                                         nlambda = penalty_res,
                                         minratio = penalty_minratio)
@@ -339,7 +341,8 @@ elasticnet.classification_analysis <-  function(
 
     wf <- workflows::workflow()
 
-    rp <- recipes::recipe(y ~ ., data = df)
+    rp <- recipes::recipe(y ~ ., data = df) |>
+      step_dummy(all_factor_predictors())
 
     model <- parsnip::logistic_reg(mode = "classification",
                                    engine = "glmnet",
@@ -353,7 +356,7 @@ elasticnet.classification_analysis <-  function(
       workflows::add_model(model)
 
     tuning_grid <- elasticnet_make_grid(y = as.numeric(df$y) - 1,
-                                        x = df[, colnames(df) != "y"],
+                                        x = juice(prep(rp)),
                                         alpha_values = mixture_values,
                                         nlambda = penalty_res,
                                         minratio = penalty_minratio)

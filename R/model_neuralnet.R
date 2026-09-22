@@ -143,6 +143,7 @@ neuralnet.regression_analysis <-  function(
     wf <- workflows::workflow()
 
     rp <- recipes::recipe(y ~ ., data = df) |>
+      step_dummy(all_factor_predictors()) |>
       step_selectbyrfimp(all_predictors(),
                          n_selected = tune_or_fix_discrete(tunevals_n_selected))
 
@@ -394,6 +395,7 @@ neuralnet.classification_analysis <-  function(
     wf <- workflows::workflow()
 
     rp <- recipes::recipe(y ~ ., data = df) |>
+      step_dummy(all_factor_predictors()) |>
       step_selectbyrfimp(all_predictors(),
                          n_selected = tune_or_fix_discrete(tunevals_n_selected))
 

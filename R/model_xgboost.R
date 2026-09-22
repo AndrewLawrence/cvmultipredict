@@ -136,7 +136,7 @@ xgboost.default <- function(x,
 #' @rdname xgboost
 #' @importFrom stats complete.cases predict update
 #' @importFrom workflows workflow add_recipe add_model
-#' @importFrom recipes recipe add_step all_predictors step_pca
+#' @importFrom recipes recipe add_step all_predictors step_pca all_factor_predictors
 #' @importFrom parsnip boost_tree fit
 #' @importFrom dplyr bind_cols bind_rows
 #' @importFrom rlang .data
@@ -215,7 +215,8 @@ xgboost.regression_analysis <-  function(
 
     wf <- workflows::workflow()
 
-    rp <- recipes::recipe(y ~ ., data = df)
+    rp <- recipes::recipe(y ~ ., data = df) |>
+      step_dummy(all_factor_predictors())
 
     model <- do.call(
       parsnip::boost_tree,
@@ -480,7 +481,8 @@ xgboost.classification_analysis <-  function(
 
     wf <- workflows::workflow()
 
-    rp <- recipes::recipe(y ~ ., data = df)
+    rp <- recipes::recipe(y ~ ., data = df) |>
+      step_dummy(all_factor_predictors())
 
     model <- do.call(
       parsnip::boost_tree,

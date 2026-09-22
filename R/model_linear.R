@@ -51,7 +51,7 @@ linear.default <- function(x,
 #' @rdname linear
 #' @importFrom stats complete.cases predict
 #' @importFrom workflows workflow add_recipe add_model
-#' @importFrom recipes recipe add_step all_predictors step_pca
+#' @importFrom recipes recipe add_step all_numeric_predictors step_pca step_dummy
 #' @importFrom parsnip linear_reg fit
 #' @importFrom dplyr bind_cols bind_rows
 #' @importFrom rlang .data
@@ -102,7 +102,8 @@ linear.regression_analysis <-  function(x,
     rp <- recipes::recipe(y ~ ., data = df)
     if ( pca ) {
       rp <- rp |>
-        step_pca(all_predictors(),
+        step_dummy(all_factor_predictors()) |>
+        step_pca(all_numeric_predictors(),
                  num_comp = pca_ncomp)
     }
 
@@ -216,7 +217,8 @@ linear.classification_analysis <-  function(x,
     rp <- recipes::recipe(y ~ ., data = df)
     if ( pca ) {
       rp <- rp |>
-        step_pca(all_predictors(),
+        step_dummy(all_factor_predictors()) |>
+        step_pca(all_numeric_predictors(),
                  num_comp = pca_ncomp)
     }
 
