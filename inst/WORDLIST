@@ -10,11 +10,11 @@ nullmetrics
 params
 pca
 perceptron
+regexp
 resultpath
 rf
 rsample
 rset
 tibble
 untuned
-xgboost
 ytype

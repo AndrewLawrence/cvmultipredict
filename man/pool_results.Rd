@@ -4,7 +4,12 @@
 \alias{pool_results}
 \title{pool_results}
 \usage{
-pool_results(x, na.rm = FALSE)
+pool_results(
+  x,
+  na.rm = FALSE,
+  use_repetition = FALSE,
+  repetition_regexp = "Rep[0-9]+"
+)
 }
 \arguments{
 \item{x}{\link{cvmultipredict} result.}
@@ -12,6 +17,15 @@ pool_results(x, na.rm = FALSE)
 \item{na.rm}{a logical evaluating to \code{TRUE} or \code{FALSE}
     indicating whether \code{NA} values should be stripped before the
     computation proceeds.}
+
+\item{use_repetition}{Return an additional SD estimate (\code{.rep_std_err})
+calculated for repetitions of k-fold CV rather than over individual folds.}
+
+\item{repetition_regexp}{A \link{regular expression} used to extract unique
+identifiers of each CV-repetition from cross-validation labels.
+For example, the default regexp \code{"Rep[0-9]+"} matches substrings
+like \code{"Rep001"}, \code{"Rep01"}, or \code{"Rep1"}, and so works with labels
+formatted like \code{"Rep001.Fold01"}.}
 }
 \value{
 A tibble containing columns:
@@ -21,7 +35,14 @@ A tibble containing columns:
 or apparent.
 \item \code{.metric}: the \link[yardstick:metrics]{metric}.
 \item \code{.estimate}: metric value (for CV averaged over resamples)
-\item \code{.std_err}: SD of the metric value (\code{NA} for apparent performance)
+\item \code{.std_err}: For cross-validated values, contains the SD of the
+metric value (\code{NA} for apparent performance).
+\item \code{.nreps} : For repeated k-fold, when \code{use_repetition=TRUE} will
+contain the number of repetitions detected.
+\item \code{.rep_std_err} : When \code{use_repetition=TRUE}the standard deviation
+of the metric taken after averaging over the k-folds in each
+repetition - i.e. a variability measure for the random division
+into folds which does not include fold-fold variability.
 }
 }
 \description{
@@ -29,3 +50,17 @@ Calculates average performance metrics over cross-validation resamples.
 Input \code{x} should be the return of cvmultipredict.
 i.e. a named list of results data.frames - one for each model.
 }
+\section{Repetition Standard Errors}{
+
+These require sufficient repeats of cross-validation to estimate the
+standard deviation over these repeats. Typically at least 10 x k-fold
+with better \code{.rep_std_err} estimates at 100 x k-fold.
+
+It is a bad idea to combine \code{na.rm=TRUE} and
+\code{use_repetition=TRUE}. In the event that some models are returning \code{NA} values
+(e.g. failing to converge) then the per-repetition standard deviation
+will not cover all the folds for each repetition and the
+\code{.rep_std_err} will not have the desired interpretation. \code{NA}s should either
+propagate (\code{na.rm = FALSE}) or the fold-fold \code{.std_err} be used.
+}
+

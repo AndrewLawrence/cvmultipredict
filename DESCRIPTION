@@ -21,6 +21,7 @@ Imports:
     recipes,
     rlang,
     rsample,
+    stringr,
     tibble,
     tune,
     vctrs,
