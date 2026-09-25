@@ -112,23 +112,56 @@ pool_results <- function(x,
 #'     cross-validated performance of each metric.
 #'
 #' @param x result of [pool_results]
+#' @param se_var controls choice of standard error definition for error-bars.
 #'
 #' @return A [ggplot object][ggplot2::ggplot]
 #'
 #' @export
-plot_pooled_results <- function(x) {
+plot_pooled_results <- function(x,
+                                se_var = c("auto",
+                                           "none",
+                                           ".std_err",
+                                           ".rep_std_err")) {
+  se_var <- match.arg(se_var)
+
+  yaxis_lab <- "Metric Estimate"
+
+  if ( se_var == "auto" ) {
+    if ( ".rep_std_err" %in% colnames(x) ) {
+      se_var <- ".rep_std_err"
+    } else {
+      se_var <- ".std_err"
+    }
+  }
+
   check_suggested("ggplot2", "Plotting")
   p <- x |>
     ggplot2::ggplot(ggplot2::aes(y = .data$.estimate,
                                  x = .data$cvtype,
-                                 ymin = .data$.estimate - 2 * .data$.std_err,
-                                 ymax = .data$.estimate + 2 * .data$.std_err,
                                  group = .data$model,
                                  colour = .data$model)) +
-    ggplot2::geom_line() +
-    ggplot2::geom_errorbar() +
+    ggplot2::geom_line()
+
+
+  if (se_var != "none") {
+    yaxis_lab <- paste0(yaxis_lab,
+                        ifelse(se_var == ".std_err",
+                               " \u00B1 SD (folds)",
+                               " \u00B1 SD (reps)"))
+
+    p <- p + ggplot2::geom_errorbar(
+      ggplot2::aes(
+        ymin = .data$.estimate - 2 * .data[[se_var]],
+        ymax = .data$.estimate + 2 * .data[[se_var]]
+      )
+    )
+  }
+
+  p <- p +
     ggplot2::geom_point() +
-    ggplot2::facet_wrap(~ .data$.metric, scales = "free_y")
+    ggplot2::facet_wrap(~ .data$.metric, scales = "free_y") +
+    ggplot2::ylab(yaxis_lab)
+
   p
 }
 

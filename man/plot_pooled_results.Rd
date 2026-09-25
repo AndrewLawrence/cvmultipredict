@@ -4,10 +4,12 @@
 \alias{plot_pooled_results}
 \title{plot_pooled_results}
 \usage{
-plot_pooled_results(x)
+plot_pooled_results(x, se_var = c("auto", "none", ".std_err", ".rep_std_err"))
 }
 \arguments{
 \item{x}{result of \link{pool_results}}
+
+\item{se_var}{controls choice of standard error definition for error-bars.}
 }
 \value{
 A \link[ggplot2:ggplot]{ggplot object}
