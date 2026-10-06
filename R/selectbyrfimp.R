@@ -104,7 +104,7 @@ prep.step_selectbyrfimp <- function(x, training, info = NULL, ...) {
 bake.step_selectbyrfimp <- function(object, new_data, ...) {
   keep_cols <- unique(c(object$outcome, object$selected_predictors))
 
-  new_data[, keep_cols, drop = FALSE]
+  new_data[, colnames(new_data) %in% keep_cols, drop = FALSE]
 }
 
 #' @export
