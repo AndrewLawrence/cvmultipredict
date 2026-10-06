@@ -5,20 +5,23 @@
 \alias{neuralnet.default}
 \alias{neuralnet.regression_analysis}
 \alias{neuralnet.classification_analysis}
-\title{This is a neuralnetwork model 2-layer multilayer perceptron}
+\title{This is a neuralnetwork model 2-layer multilayer perceptron (MLP) fit with torch
+via tidymodels + kindling.}
 \usage{
 neuralnet(
   x,
   folder,
-  tuning_grid_n = 243,
+  tuning_grid_n = 64L,
   tunevals_hidden_layers = 2^(2:6),
   tunevals_n_selected = seq(4, 12, by = 2),
-  tunerange_epochs = c(10L, 1000L),
-  tunerange_learn_rate = c(-10, -1),
+  tunerange_epochs = 1000L,
+  tunerange_learn_rate = c(-5, -1),
   tuning_bayes_maxit = 50L,
   tuning_bayes_minit = 10L,
   tuning_resample_fxn = "vfold_cv",
   tuning_resample_args = list(v = 10, repeats = 1, strata = "y"),
+  tuning_use_early_stopping = "default",
+  device = c("cpu", "cuda", "mps"),
   check_futility = TRUE,
   metricset = NULL,
   .RUN = TRUE,
@@ -28,15 +31,17 @@ neuralnet(
 \method{neuralnet}{default}(
   x,
   folder,
-  tuning_grid_n = 243,
+  tuning_grid_n = 64L,
   tunevals_hidden_layers = 2^(2:6),
   tunevals_n_selected = seq(4, 12, by = 2),
-  tunerange_epochs = c(10L, 1000L),
-  tunerange_learn_rate = c(-10, -1),
+  tunerange_epochs = 1000L,
+  tunerange_learn_rate = c(-5, -1),
   tuning_bayes_maxit = 50L,
   tuning_bayes_minit = 10L,
   tuning_resample_fxn = "vfold_cv",
   tuning_resample_args = list(v = 10, repeats = 1, strata = "y"),
+  tuning_use_early_stopping = "default",
+  device = c("cpu", "cuda", "mps"),
   check_futility = TRUE,
   metricset = NULL,
   .RUN = TRUE,
@@ -46,15 +51,17 @@ neuralnet(
 \method{neuralnet}{regression_analysis}(
   x,
   folder,
-  tuning_grid_n = 243,
+  tuning_grid_n = 64L,
   tunevals_hidden_layers = 2^(2:6),
   tunevals_n_selected = seq(4, 12, by = 2),
-  tunerange_epochs = c(10L, 1000L),
-  tunerange_learn_rate = c(-10, -1),
+  tunerange_epochs = 1000L,
+  tunerange_learn_rate = c(-5, -1),
   tuning_bayes_maxit = 50L,
   tuning_bayes_minit = 10L,
   tuning_resample_fxn = "vfold_cv",
   tuning_resample_args = list(v = 10, repeats = 1, strata = "y"),
+  tuning_use_early_stopping = "default",
+  device = c("cpu", "cuda", "mps"),
   check_futility = TRUE,
   metricset = metricset_regression(),
   .RUN = TRUE,
@@ -64,15 +71,17 @@ neuralnet(
 \method{neuralnet}{classification_analysis}(
   x,
   folder,
-  tuning_grid_n = 243,
+  tuning_grid_n = 64L,
   tunevals_hidden_layers = 2^(2:6),
   tunevals_n_selected = seq(4, 12, by = 2),
-  tunerange_epochs = c(10L, 1000L),
-  tunerange_learn_rate = c(-10, -1),
+  tunerange_epochs = 1000L,
+  tunerange_learn_rate = c(-5, -1),
   tuning_bayes_maxit = 50L,
   tuning_bayes_minit = 10L,
   tuning_resample_fxn = "vfold_cv",
   tuning_resample_args = list(v = 10, repeats = 1, strata = "y"),
+  tuning_use_early_stopping = "default",
+  device = c("cpu", "cuda", "mps"),
   check_futility = TRUE,
   metricset = metricset_classification(),
   .RUN = TRUE,
@@ -85,12 +94,8 @@ neuralnet(
 \item{folder}{a folder path ending in a model-name unique label
 used to store results.}
 
-\item{tuning_grid_n}{size of initial \link[dials:grid_space_filling]{space-filling}
-tuning grid. Default: 3^5 = 243.
-Recommendation: base_spacing ^ dimensionality -
-i.e. same number of elements as a hypercube with a (relatively)
-low spacing resolution in each dimension. Due to the space_filling grid the
-effective spacing within dimension is much greater than the base spacing.}
+\item{tuning_grid_n}{size (i.e. number elements) in the initial \code{max_entropy}
+tuning grid. Default: \code{4^{tuning_dimensionality} = 4^3 = 64}.}
 
 \item{tunevals_hidden_layers}{tuning values for hidden_layers.
 default: 4,8,16,32,64.
@@ -100,10 +105,10 @@ default: 4,8,16,32,64.
 include (filtered by \link[=step_selectbyrfimp]{rf importance}).}
 
 \item{tunerange_epochs}{tuning range for \link[dials:epochs]{epochs}.
-default: 10 : 1000}
+default: 1000 (fixed with early stopping)}
 
 \item{tunerange_learn_rate}{tuning range for \link[dials:learn_rate]{learn_rate}.
-default 1e-10 : 0.1}
+default 1e-5 : 1e-1}
 
 \item{tuning_bayes_maxit}{maximum number of Bayesian optimisation iterations.
 Default: 50L. Set to 0L to suppress bayesian optimisation.}
@@ -117,6 +122,12 @@ which will be used to resample the data for tuning purposes
 (e.g. \link[rsample:bootstraps]{"bootstraps"}, \link[rsample:vfold_cv]{"vfoldcv"})}
 
 \item{tuning_resample_args}{list of arguments to pass to \code{tuning_resample_fxn}}
+
+\item{tuning_use_early_stopping}{either \code{"default"}, \code{NULL},
+or an \code{\link[kindling:early_stop]{kindling::early_stop()}} function.}
+
+\item{device}{A character string for the device used to fit the model
+("cpu", "cuda", "mps").}
 
 \item{check_futility}{logical. Futility checks on the finalmodel
 determine whether cross-validation should be conducted.
@@ -132,5 +143,34 @@ missing models.}
 \item{...}{unused.}
 }
 \description{
-This is a neuralnetwork model 2-layer multilayer perceptron
+This is a neuralnetwork model 2-layer multilayer perceptron (MLP) fit with torch
+via tidymodels + kindling.
 }
+\section{Hyperparameter tuning}{
+
+The intended use of the neuralnet model is to tune the
+number of neurons and the learn_rate, using a single fixed (large ~= 1000L)
+number of epochs with early_stopping to minimise futile computation.
+Reasonably general or default selections are made for other hyperparameters.
+
+Specifically the following interface is provided:
+
+\emph{Fixed hyperparameters} - the model fixes the number of layers to be 2L, both
+with \code{"relu"} activation. The optimiser is fixed to be \code{"adam"}.
+There is no support to change these currently.
+
+\emph{Settable hyperparameters} - \code{early_stopping} methods can be specified but
+not tuned.
+
+\emph{Tunable hyperparameters} - the following are tunable by specifying
+either the range or values that will be considered for tuning:
+\itemize{
+\item \code{hidden_layers} - specify as a set, will be crossed for hl1 and hl2
+(i.e. c(2,4) will allow 2->4, 4->2, 2->2 and 4->4)
+\item \code{learn_rate} - specify as a range on log10 scale, i.e. -5, -1 produces
+values between 0.00001 and 0.1.
+\item \code{epochs} - although tunable as a range, the default is to use a single
+(high) fixed value (with early_stopping to save computation).
+}
+}
+

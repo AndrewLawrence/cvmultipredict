@@ -1,10 +1,16 @@
+MLP
 RData
 XGBoost
+cpu
+cuda
 elasticnet
 finalmodel
 glmnet
 glmnet's
+hl
 json
+mps
+neuralnet
 neuralnetwork
 nullmetrics
 params
@@ -16,5 +22,6 @@ rf
 rsample
 rset
 tibble
+tidymodels
 untuned
 ytype

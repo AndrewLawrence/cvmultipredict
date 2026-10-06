@@ -9,7 +9,34 @@
 #     (i.e. entropy_max) hyperparameter combinations + bayesian optimisation
 #     as with xgboost.
 
-#' This is a neuralnetwork model 2-layer multilayer perceptron
+#' This is a neuralnetwork model 2-layer multilayer perceptron (MLP) fit with torch
+#'     via tidymodels + kindling.
+#'
+#' @section Hyperparameter tuning:
+#'    The intended use of the neuralnet model is to tune the
+#'    number of neurons and the learn_rate, using a single fixed (large ~= 1000L)
+#'    number of epochs with early_stopping to minimise futile computation.
+#'    Reasonably general or default selections are made for other hyperparameters.
+#'
+#'    Specifically the following interface is provided:
+#'
+#'    *Fixed hyperparameters* - the model fixes the number of layers to be 2L, both
+#'    with `"relu"` activation. The optimiser is fixed to be `"adam"`.
+#'    There is no support to change these currently.
+#'
+#'    *Settable hyperparameters* - `early_stopping` methods can be specified but
+#'    not tuned.
+#'
+#'    *Tunable hyperparameters* - the following are tunable by specifying
+#'    either the range or values that will be considered for tuning:
+#'    * `hidden_layers` - specify as a set, will be crossed for hl1 and hl2
+#'        (i.e. c(2,4) will allow 2->4, 4->2, 2->2 and 4->4)
+#'    * `learn_rate` - specify as a range on log10 scale, i.e. -5, -1 produces
+#'        values between 0.00001 and 0.1.
+#'    * `epochs` - although tunable as a range, the default is to use a single
+#'        (high) fixed value (with early_stopping to save computation).
+#' @param tuning_grid_n size (i.e. number elements) in the initial `max_entropy`
+#'     tuning grid. Default: `4^{tuning_dimensionality} = 4^3 = 64`.
 #' @inheritParams xgboost
 #' @param tunevals_hidden_layers tuning values for hidden_layers.
 #'     default: 4,8,16,32,64.
@@ -17,25 +44,30 @@
 #' @param tunevals_n_selected tuning values (discrete) for number of variables to
 #'     include (filtered by [rf importance][step_selectbyrfimp]).
 #' @param tunerange_epochs tuning range for [epochs][dials::epochs].
-#'     default: 10 : 1000
+#'     default: 1000 (fixed with early stopping)
 #' @param tunerange_learn_rate tuning range for [learn_rate][dials::learn_rate].
-#'     default 1e-10 : 0.1
-#'
+#'     default 1e-5 : 1e-1
+#' @param tuning_use_early_stopping either `"default"`, `NULL`,
+#'     or an [kindling::early_stop()] function.
+#' @param device A character string for the device used to fit the model
+#'     ("cpu", "cuda", "mps").
 #' @rdname neuralnet
 #' @export
 neuralnet <- function(x,
                       folder,
-                      tuning_grid_n = 243,
+                      tuning_grid_n = 64L,
                       tunevals_hidden_layers = 2^(2:6),
                       tunevals_n_selected = seq(4, 12, by = 2),
-                      tunerange_epochs = c(10L, 1000L),
-                      tunerange_learn_rate = c(-10, -1),
+                      tunerange_epochs = 1000L,
+                      tunerange_learn_rate = c(-5, -1),
                       tuning_bayes_maxit = 50L,
                       tuning_bayes_minit = 10L,
                       tuning_resample_fxn = "vfold_cv",
                       tuning_resample_args = list(v = 10,
                                                   repeats = 1,
                                                   strata = "y"),
+                      tuning_use_early_stopping = "default",
+                      device = c("cpu", "cuda", "mps"),
                       check_futility = TRUE,
                       metricset = NULL,
                       .RUN = TRUE,
@@ -47,17 +79,19 @@ neuralnet <- function(x,
 #' @export
 neuralnet.default <- function(x,
                               folder,
-                              tuning_grid_n = 243,
+                              tuning_grid_n = 64L,
                               tunevals_hidden_layers = 2^(2:6),
                               tunevals_n_selected = seq(4, 12, by = 2),
-                              tunerange_epochs = c(10L, 1000L),
-                              tunerange_learn_rate = c(-10, -1),
+                              tunerange_epochs = 1000L,
+                              tunerange_learn_rate = c(-5, -1),
                               tuning_bayes_maxit = 50L,
                               tuning_bayes_minit = 10L,
                               tuning_resample_fxn = "vfold_cv",
                               tuning_resample_args = list(v = 10,
                                                           repeats = 1,
                                                           strata = "y"),
+                              tuning_use_early_stopping = "default",
+                              device = c("cpu", "cuda", "mps"),
                               check_futility = TRUE,
                               metricset = NULL,
                               .RUN = TRUE,
@@ -79,15 +113,17 @@ neuralnet.default <- function(x,
 neuralnet.regression_analysis <-  function(
   x,
   folder,
-  tuning_grid_n = 243,
+  tuning_grid_n = 64L,
   tunevals_hidden_layers = 2^(2:6),
   tunevals_n_selected = seq(4, 12, by = 2),
-  tunerange_epochs = c(10L, 1000L),
-  tunerange_learn_rate = c(-10, -1),
+  tunerange_epochs = 1000L,
+  tunerange_learn_rate = c(-5, -1),
   tuning_bayes_maxit = 50L,
   tuning_bayes_minit = 10L,
   tuning_resample_fxn = "vfold_cv",
   tuning_resample_args = list(v = 10, repeats = 1, strata = "y"),
+  tuning_use_early_stopping = "default",
+  device = c("cpu", "cuda", "mps"),
   check_futility = TRUE,
   metricset = metricset_regression(),
   .RUN = TRUE,
@@ -117,6 +153,9 @@ neuralnet.regression_analysis <-  function(
   checkmate::assert_true(
     all(tunevals_n_selected == as.integer(tunevals_n_selected))
   )
+  device <- match.arg(device)
+
+  tuning_use_early_stopping <- .handle_earlystopping(tuning_use_early_stopping)
 
   DO_BAYES <- TRUE
   if ( tuning_bayes_maxit == 0L ) {
@@ -156,7 +195,9 @@ neuralnet.regression_analysis <-  function(
         activations = c("relu", "relu"),
         hidden_neurons = tune_or_fix_discrete(tunevals_hidden_layers),
         epochs = tune_or_fix_range(tunerange_epochs),
-        learn_rate = tune_or_fix_range(tunerange_learn_rate)
+        learn_rate = tune_or_fix_range(tunerange_learn_rate),
+        early_stopping = tuning_use_early_stopping,
+        device = device
       )
     )
 
@@ -164,13 +205,31 @@ neuralnet.regression_analysis <-  function(
       workflows::add_recipe(rp) |>
       workflows::add_model(model)
 
+    param_list <- list(
+      hidden_neurons = kindling::hidden_neurons(disc_values = tunevals_hidden_layers)
+    )
+    if ( length(tunerange_learn_rate) > 1L ) {
+      param_list <- append(
+        param_list,
+        list(learn_rate = learn_rate(range = tunerange_learn_rate))
+      )
+    }
+    if ( length(tunerange_epochs) > 1L ) {
+      param_list <- append(
+        param_list,
+        list(epochs = dials::epochs(range = tunerange_epochs))
+      )
+    }
+    if ( length(tunevals_n_selected) > 1L ) {
+      param_list <- append(
+        param_list,
+        list(rf_n_selected = rf_n_selected(disc_values = tunevals_n_selected))
+      )
+    }
+
     param_info <- parameters(
-      kindling::hidden_neurons(disc_values = tunevals_hidden_layers),
-      dials::epochs(range = tunerange_epochs),
-      learn_rate(range = tunerange_learn_rate),
-      rf_n_selected(disc_values = tunevals_n_selected)
-    ) |>
-      finalize(x = df[, -1])
+      param_list
+    )
 
     # Initial tuning grid:
     tuning_grid <- kindling::grid_depth(param_info,
@@ -331,15 +390,17 @@ neuralnet.regression_analysis <-  function(
 neuralnet.classification_analysis <-  function(
   x,
   folder,
-  tuning_grid_n = 243,
+  tuning_grid_n = 64L,
   tunevals_hidden_layers = 2^(2:6),
   tunevals_n_selected = seq(4, 12, by = 2),
-  tunerange_epochs = c(10L, 1000L),
-  tunerange_learn_rate = c(-10, -1),
+  tunerange_epochs = 1000L,
+  tunerange_learn_rate = c(-5, -1),
   tuning_bayes_maxit = 50L,
   tuning_bayes_minit = 10L,
   tuning_resample_fxn = "vfold_cv",
   tuning_resample_args = list(v = 10, repeats = 1, strata = "y"),
+  tuning_use_early_stopping = "default",
+  device = c("cpu", "cuda", "mps"),
   check_futility = TRUE,
   metricset = metricset_classification(),
   .RUN = TRUE,
@@ -369,6 +430,9 @@ neuralnet.classification_analysis <-  function(
   checkmate::assert_true(
     all(tunevals_n_selected == as.integer(tunevals_n_selected))
   )
+  device <- match.arg(device)
+
+  tuning_use_early_stopping <- .handle_earlystopping(tuning_use_early_stopping)
 
   DO_BAYES <- TRUE
   if ( tuning_bayes_maxit == 0L ) {
@@ -408,7 +472,9 @@ neuralnet.classification_analysis <-  function(
         activations = c("relu", "relu"),
         hidden_neurons = tune_or_fix_discrete(tunevals_hidden_layers),
         epochs = tune_or_fix_range(tunerange_epochs),
-        learn_rate = tune_or_fix_range(tunerange_learn_rate)
+        learn_rate = tune_or_fix_range(tunerange_learn_rate),
+        early_stopping = tuning_use_early_stopping,
+        device = device
       )
     )
 
@@ -416,13 +482,31 @@ neuralnet.classification_analysis <-  function(
       workflows::add_recipe(rp) |>
       workflows::add_model(model)
 
+    param_list <- list(
+      hidden_neurons = kindling::hidden_neurons(disc_values = tunevals_hidden_layers)
+    )
+    if ( length(tunerange_learn_rate) > 1L ) {
+      param_list <- append(
+        param_list,
+        list(learn_rate = learn_rate(range = tunerange_learn_rate))
+      )
+    }
+    if ( length(tunerange_epochs) > 1L ) {
+      param_list <- append(
+        param_list,
+        list(epochs = dials::epochs(range = tunerange_epochs))
+      )
+    }
+    if ( length(tunevals_n_selected) > 1L ) {
+      param_list <- append(
+        param_list,
+        list(rf_n_selected = rf_n_selected(disc_values = tunevals_n_selected))
+      )
+    }
+
     param_info <- parameters(
-      kindling::hidden_neurons(disc_values = tunevals_hidden_layers),
-      dials::epochs(range = tunerange_epochs),
-      learn_rate(range = tunerange_learn_rate),
-      rf_n_selected(disc_values = tunevals_n_selected)
-    ) |>
-      finalize(x = df[, -1])
+      param_list
+    )
 
     # Initial tuning grid:
     tuning_grid <- kindling::grid_depth(param_info,
@@ -652,4 +736,11 @@ futility_check_neuralnet <- function(
     chk <- TRUE
   }
   chk
+}
+
+.handle_earlystopping <- function(x) {
+  if ( identical(x, "default")) {
+    return( kindling::early_stop() )
+  }
+  x
 }
